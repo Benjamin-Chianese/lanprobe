@@ -15,7 +15,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 'lts/*'
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -78,7 +78,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 'lts/*'
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -130,7 +130,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 'lts/*'
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -173,7 +173,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: 'lts/*'
 
       - uses: dtolnay/rust-toolchain@stable
         with:
