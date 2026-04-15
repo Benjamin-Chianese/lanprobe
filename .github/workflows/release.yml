@@ -6,23 +6,26 @@ on:
       - 'v*.*.*'
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build-linux:
     name: Build Linux (.deb)
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
+          node-version: '22'
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      - uses: actions/cache@v4
+      - name: Cache Cargo
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -36,7 +39,8 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev \
             libayatana-appindicator3-dev libssl-dev pkg-config build-essential file
 
-      - run: npm ci
+      - name: Install frontend deps
+        run: npm ci
 
       - name: Build iperf3 (static Linux)
         env:
@@ -50,6 +54,7 @@ jobs:
           ./configure --enable-static-bin --disable-shared LDFLAGS="-static"
           make -j"$(nproc)"
           strip src/iperf3
+          file src/iperf3
           mkdir -p "$GITHUB_WORKSPACE/src-tauri/resources/linux"
           cp src/iperf3 "$GITHUB_WORKSPACE/src-tauri/resources/linux/iperf3"
           chmod +x "$GITHUB_WORKSPACE/src-tauri/resources/linux/iperf3"
@@ -59,16 +64,18 @@ jobs:
           NO_STRIP: "true"
         run: npx tauri build --bundles deb
 
-      - name: Collect artifact
+      - name: Collect artifacts
         id: artifacts
         env:
           TAG: ${{ github.ref_name }}
         run: |
+          set -e
           DEB=$(find target/release/bundle/deb -name "*.deb" | head -1)
           cp "$DEB" "lanprobe_${TAG}_amd64.deb"
           echo "deb=lanprobe_${TAG}_amd64.deb" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
         with:
           name: linux
           path: ${{ steps.artifacts.outputs.deb }}
@@ -76,16 +83,22 @@ jobs:
   build-linux-server:
     name: Build Linux headless server (.deb)
     runs-on: ubuntu-24.04
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
+          node-version: '22'
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
 
-      - uses: actions/cache@v4
+      - name: Cache Cargo
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -96,9 +109,10 @@ jobs:
       - name: System dependencies
         run: sudo apt-get update && sudo apt-get install -y build-essential pkg-config libssl-dev
 
-      - run: npm ci
+      - name: Install frontend deps
+        run: npm ci
 
-      - name: Build frontend
+      - name: Build frontend (required for rust-embed)
         run: npm run build
 
       - name: Install cargo-deb
@@ -115,12 +129,14 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: |
+          set -e
           DEB=$(find target/debian -name "lanprobe-server*.deb" | head -1)
           DEST="lanprobe-server_${TAG}_amd64.deb"
           cp "$DEB" "$DEST"
           echo "deb=$DEST" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
         with:
           name: linux-server
           path: ${{ steps.artifacts.outputs.deb }}
@@ -128,18 +144,24 @@ jobs:
   build-windows:
     name: Build Windows (NSIS .exe)
     runs-on: windows-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
+          node-version: '22'
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-pc-windows-msvc
 
-      - uses: actions/cache@v4
+      - name: Cache Cargo
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -147,7 +169,8 @@ jobs:
             target
           key: windows-cargo-${{ hashFiles('Cargo.lock') }}
 
-      - run: npm ci
+      - name: Install frontend deps
+        run: npm ci
 
       - name: Tauri build
         run: npx tauri build
@@ -158,12 +181,14 @@ jobs:
         env:
           TAG: ${{ github.ref_name }}
         run: |
+          set -e
           NSIS=$(find target/release/bundle/nsis -name "*-setup.exe" | head -1)
           DEST="lanprobe_${TAG}_x64-setup.exe"
           cp "$NSIS" "$DEST"
           echo "exe=$DEST" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
         with:
           name: windows
           path: ${{ steps.artifacts.outputs.exe }}
@@ -171,18 +196,24 @@ jobs:
   build-macos:
     name: Build macOS universal DMG + PKG
     runs-on: macos-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v6
 
-      - uses: actions/setup-node@v4
+      - name: Setup Node
+        uses: actions/setup-node@v6
         with:
-          node-version: 'lts/*'
+          node-version: '22'
 
-      - uses: dtolnay/rust-toolchain@stable
+      - name: Setup Rust (arm64 + x64 targets)
+        uses: dtolnay/rust-toolchain@stable
         with:
           targets: aarch64-apple-darwin,x86_64-apple-darwin
 
-      - uses: actions/cache@v4
+      - name: Cache Cargo
+        uses: actions/cache@v5
         with:
           path: |
             ~/.cargo/registry
@@ -190,7 +221,8 @@ jobs:
             target
           key: macos-cargo-${{ hashFiles('Cargo.lock') }}
 
-      - run: npm ci
+      - name: Install frontend deps
+        run: npm ci
 
       - name: Build iperf3 (universal macOS)
         env:
@@ -205,11 +237,12 @@ jobs:
             CFLAGS="-arch x86_64 -arch arm64 -mmacosx-version-min=10.13" \
             LDFLAGS="-arch x86_64 -arch arm64 -mmacosx-version-min=10.13"
           make -j"$(sysctl -n hw.ncpu)"
+          file src/iperf3
           mkdir -p "$GITHUB_WORKSPACE/src-tauri/resources/macos"
           cp src/iperf3 "$GITHUB_WORKSPACE/src-tauri/resources/macos/iperf3"
           chmod +x "$GITHUB_WORKSPACE/src-tauri/resources/macos/iperf3"
 
-      - name: Import Apple signing certificates
+      - name: Import Apple signing certificates (app + installer)
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -222,47 +255,89 @@ jobs:
           security create-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PWD" "$KEYCHAIN"
+
+          # Developer ID Application (pour codesign du .app et du binaire iperf3).
+          # `-A` autorise n'importe quel binaire à utiliser la clé privée sans
+          # prompt ACL — indispensable en CI sans session GUI, et safe ici
+          # puisque le keychain est éphémère et détruit à la fin du job.
           echo "$APPLE_CERTIFICATE" | base64 --decode > /tmp/cert.p12
           security import /tmp/cert.p12 -k "$KEYCHAIN" -P "$APPLE_CERTIFICATE_PASSWORD" -A
           rm /tmp/cert.p12
+
+          # Developer ID Installer (pour signer le .pkg avec pkgbuild --sign).
           echo "$APPLE_INSTALLER_CERTIFICATE" | base64 --decode > /tmp/installer.p12
           security import /tmp/installer.p12 -k "$KEYCHAIN" -P "$APPLE_INSTALLER_CERTIFICATE_PASSWORD" -A
           rm /tmp/installer.p12
+
           security set-key-partition-list -S apple-tool:,apple:,codesign:,productsign:,productbuild:,pkgbuild: -s -k "$KEYCHAIN_PWD" "$KEYCHAIN" >/dev/null
           security list-keychains -d user -s "$KEYCHAIN" $(security list-keychains -d user | tr -d '"')
           security default-keychain -s "$KEYCHAIN"
 
-      - name: Codesign iperf3
+          echo "=== codesigning identities ==="
+          security find-identity -v -p codesigning "$KEYCHAIN"
+          echo "=== all identities ==="
+          security find-identity -v "$KEYCHAIN"
+
+      - name: Codesign iperf3 binary (hardened runtime + timestamp)
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
         run: |
-          codesign --force --sign "$APPLE_SIGNING_IDENTITY" --options runtime --timestamp \
-            "$GITHUB_WORKSPACE/src-tauri/resources/macos/iperf3"
+          set -e
+          BIN="$GITHUB_WORKSPACE/src-tauri/resources/macos/iperf3"
+          codesign --force --sign "$APPLE_SIGNING_IDENTITY" --options runtime --timestamp "$BIN"
+          codesign -dv --verbose=4 "$BIN"
 
-      - name: Build & sign Tauri app + DMG
+      - name: Build & sign Tauri app + DMG (universal)
         env:
           APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        # Tauri code-signe le .app, le notarise et le staple, puis produit le
+        # DMG à partir du .app déjà stapled. On réutilise ce .app pour le .pkg.
         run: npx tauri build --target universal-apple-darwin --bundles app,dmg --verbose
 
-      - name: Build signed .pkg
+      - name: Build signed .pkg with postinstall sudoers
         id: pkg
         env:
           TAG: ${{ github.ref_name }}
         run: |
           set -e
           APP_PATH=$(ls -d target/universal-apple-darwin/release/bundle/macos/*.app | head -1)
+          echo "app: $APP_PATH"
+
+          # Identité Developer ID Installer — extraite dynamiquement du keychain
+          # pour ne pas dépendre d'un secret supplémentaire.
           INSTALLER_ID=$(security find-identity -v | grep "Developer ID Installer" | head -1 | sed -E 's/.*"([^"]+)".*/\1/')
+          if [ -z "$INSTALLER_ID" ]; then
+            echo "Developer ID Installer cert introuvable dans le keychain"
+            security find-identity -v
+            exit 1
+          fi
+          echo "installer identity: $INSTALLER_ID"
+
           SCRIPTS_DIR="$GITHUB_WORKSPACE/src-tauri/scripts/macos/pkg-scripts"
           chmod 755 "$SCRIPTS_DIR/postinstall"
+
+          # pkgbuild avec --root <dossier> copie tout le contenu du dossier
+          # à --install-location, puis exécute les --scripts à l'install.
+          # productbuild --component n'exécute PAS les scripts (ils sont
+          # interprétés comme des ressources de distribution), donc on
+          # utilise pkgbuild directement.
           PKG_ROOT=$(mktemp -d)
           cp -R "$APP_PATH" "$PKG_ROOT/"
+
           SIGNED_PKG="lanprobe_${TAG}_universal.pkg"
+
+          # Générer un component-plist et forcer BundleIsRelocatable=NO —
+          # sinon macOS Installer cherche un LanProbe.app existant ailleurs
+          # sur le disque et install "en place" au lieu de /Applications,
+          # ce qui laissait le .pkg apparemment sans effet chez l'utilisateur.
           COMPONENT_PLIST="$(mktemp).plist"
           pkgbuild --analyze --root "$PKG_ROOT" "$COMPONENT_PLIST"
           /usr/libexec/PlistBuddy -c "Set :0:BundleIsRelocatable false" "$COMPONENT_PLIST"
+          cat "$COMPONENT_PLIST"
+
           pkgbuild \
             --root "$PKG_ROOT" \
             --component-plist "$COMPONENT_PLIST" \
@@ -272,7 +347,11 @@ jobs:
             --version "${TAG#v}" \
             --sign "$INSTALLER_ID" \
             "$SIGNED_PKG"
+
           rm -rf "$PKG_ROOT" "$COMPONENT_PLIST"
+          pkgutil --check-signature "$SIGNED_PKG"
+          pkgutil --payload-files "$SIGNED_PKG" | head -20
+
           echo "pkg=$SIGNED_PKG" >> "$GITHUB_OUTPUT"
 
       - name: Notarize .pkg
@@ -282,16 +361,22 @@ jobs:
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           PKG: ${{ steps.pkg.outputs.pkg }}
         run: |
+          set -e
           xcrun notarytool submit "$PKG" \
-            --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_PASSWORD" --wait
+            --apple-id "$APPLE_ID" \
+            --team-id "$APPLE_TEAM_ID" \
+            --password "$APPLE_PASSWORD" \
+            --wait
           xcrun stapler staple "$PKG"
+          xcrun stapler validate "$PKG"
 
-      - name: Collect artifacts
+      - name: Collect artifacts (DMG + PKG)
         id: artifacts
         env:
           TAG: ${{ github.ref_name }}
           PKG: ${{ steps.pkg.outputs.pkg }}
         run: |
+          set -e
           DMG_ORIG=$(ls target/universal-apple-darwin/release/bundle/dmg/*.dmg | head -1)
           DMG_DEST="lanprobe_${TAG}_universal.dmg"
           cp "$DMG_ORIG" "$DMG_DEST"
@@ -302,7 +387,8 @@ jobs:
           echo "pkg=$PKG" >> "$GITHUB_OUTPUT"
           echo "pkg_sha=${PKG}.sha256" >> "$GITHUB_OUTPUT"
 
-      - uses: actions/upload-artifact@v4
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v7
         with:
           name: macos
           path: |
@@ -318,7 +404,8 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v8
         with:
           path: dist
 
@@ -326,8 +413,10 @@ jobs:
         run: |
           mkdir -p release
           find dist -type f -exec cp {} release/ \;
+          ls -lh release
 
-      - uses: softprops/action-gh-release@v2
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v3
         with:
           tag_name: ${{ github.ref_name }}
           name: ${{ github.ref_name }}
