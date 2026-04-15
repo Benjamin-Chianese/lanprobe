@@ -19,26 +19,26 @@
 
 ---
 
-## 🔍 What is LanProbe?
+## 🖧 What is LanProbe?
 
 LanProbe replaces a handful of separate network utilities with one coherent interface. Built for engineers who switch between interfaces frequently, debug connectivity issues, or need to monitor multiple hosts at once.
 
-- 🔄 **Switch network profiles in one click** — no more typing static IPs into system dialogs
+- 🔀 **Switch network profiles in one click** — no more typing static IPs into system dialogs
 - 📡 **Watch multiple hosts in real time** with latency history and SLA statistics
-- 🗺️ **Scan your network** to discover who's on the subnet
+- 🔍 **Scan your network** to discover who's on the subnet
 - ⚡ **Test throughput** bound to a specific interface — no OS routing surprises
-- 🖥️ **Deploy headless** on a Debian server or Raspberry Pi — access the full UI from any browser on the LAN
+- 🗄️ **Deploy headless** on a Debian server or Raspberry Pi — access the full UI from any browser on the LAN
 
 ---
 
-## ✨ Features
+## 🧩 Features
 
 | Module | What it does |
 |--------|-------------|
-| 🗂️ **Network Profiles** | Save named static-IP or DHCP configurations, apply them in one click |
+| 🔀 **Network Profiles** | Save named static-IP or DHCP configurations, apply them in one click |
 | 📡 **Ping Monitor** | Continuous ICMP monitoring of multiple hosts, real-time latency graph, configurable alert thresholds |
 | 📊 **SLA Export** | Per-host uptime %, avg / min / max / P95 latency — exportable to CSV |
-| 🗺️ **Network Discovery** | Fast async CIDR scan returning IP, hostname and MAC address of live hosts |
+| 🔍 **Network Discovery** | Fast async CIDR scan returning IP, hostname and MAC address of live hosts |
 | 🔌 **Port Scan** | TCP scan with built-in profiles (common, web, full) and custom profiles |
 | ⚡ **Speed Test** | Ookla CLI speed test bound to the selected interface via `IP_BOUND_IF` / `SO_BINDTODEVICE` |
 | 🌐 **Web Server Mode** | Expose the full LanProbe UI over HTTPS on the LAN — desktop app or standalone headless binary |
@@ -49,7 +49,7 @@ LanProbe replaces a handful of separate network utilities with one coherent inte
 
 ## 📦 Installation
 
-### 🖥️ Desktop app
+### 💻 Desktop app
 
 Pre-built installers are published on **[GitHub Releases](https://github.com/Benjamin-Chianese/lanprobe/releases/latest)**.
 
@@ -66,7 +66,7 @@ The app ships an **auto-updater** — subsequent updates are one click from the 
 
 ---
 
-### 🐧 Headless server on Debian / Ubuntu (no GUI required)
+### 🗄️ Headless server on Debian / Ubuntu (no GUI required)
 
 `lanprobe-server` is a standalone binary that serves the full LanProbe web UI over HTTPS. It requires no desktop environment and runs as a systemd service.
 
@@ -159,7 +159,7 @@ sudo apt remove lanprobe-server
 
 ---
 
-### 🔗 Web Server Mode (desktop app)
+### 🌐 Web Server Mode (desktop app)
 
 The desktop app can also act as a server — enable it from **Settings → Server Mode**. This streams live data from your desktop machine to any browser on the LAN without installing a separate package.
 
@@ -242,7 +242,7 @@ lanprobe/
 
 ---
 
-## 🖥️ Compatibility
+## 🖧 Compatibility
 
 | OS | Version | Architecture |
 |----|---------|--------------|
