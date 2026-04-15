@@ -19,37 +19,37 @@
 
 ---
 
-## Qu'est-ce que LanProbe ?
+## 🔍 Qu'est-ce que LanProbe ?
 
 LanProbe remplace une poignée d'utilitaires réseau séparés par une interface cohérente. Conçu pour les ingénieurs qui changent fréquemment d'interface, déboguent des problèmes de connectivité, ou ont besoin de surveiller plusieurs hôtes simultanément.
 
-- **Changer de profil réseau en un clic** — fini les saisies manuelles d'IP statiques dans les dialogs système
-- **Surveiller plusieurs hôtes en temps réel** avec historique de latence et statistiques SLA
-- **Scanner le réseau** pour découvrir les machines sur le sous-réseau
-- **Tester le débit** lié à une interface spécifique — sans surprise de routage OS
-- **Déployer en headless** sur un serveur Debian ou Raspberry Pi — accès à l'UI complète depuis n'importe quel navigateur du LAN
+- 🔄 **Changer de profil réseau en un clic** — fini les saisies manuelles d'IP statiques dans les dialogs système
+- 📡 **Surveiller plusieurs hôtes en temps réel** avec historique de latence et statistiques SLA
+- 🗺️ **Scanner le réseau** pour découvrir les machines sur le sous-réseau
+- ⚡ **Tester le débit** lié à une interface spécifique — sans surprise de routage OS
+- 🖥️ **Déployer en headless** sur un serveur Debian ou Raspberry Pi — accès à l'UI complète depuis n'importe quel navigateur du LAN
 
 ---
 
-## Fonctionnalités
+## ✨ Fonctionnalités
 
 | Module | Description |
 |--------|-------------|
-| **Profils réseau** | Enregistrer des configurations IP statique ou DHCP nommées, les appliquer en un clic |
-| **Ping Monitor** | Surveillance ICMP continue de plusieurs hôtes, graphique de latence en temps réel, seuils d'alerte configurables |
-| **Export SLA** | Uptime % par hôte, avg / min / max / P95 de latence — exportable en CSV |
-| **Découverte réseau** | Scan CIDR asynchrone rapide retournant IP, hostname et adresse MAC des hôtes actifs |
-| **Port Scan** | Scan TCP avec profils intégrés (common, web, full) et profils personnalisés |
-| **Speed Test** | Test de débit Ookla CLI lié à l'interface sélectionnée via `IP_BOUND_IF` / `SO_BINDTODEVICE` |
-| **Mode serveur web** | Expose l'UI LanProbe complète en HTTPS sur le LAN — application desktop ou binaire headless standalone |
-| **Statut internet** | Double sonde (ICMP + HTTP) avec IP publique et pourcentage d'uptime |
-| **Palettes de couleurs** | 6 palettes d'accent (Indigo, Cyan, Emerald, Rose, Amber, Slate) — mode sombre et clair |
+| 🗂️ **Profils réseau** | Enregistrer des configurations IP statique ou DHCP nommées, les appliquer en un clic |
+| 📡 **Ping Monitor** | Surveillance ICMP continue de plusieurs hôtes, graphique de latence en temps réel, seuils d'alerte configurables |
+| 📊 **Export SLA** | Uptime % par hôte, avg / min / max / P95 de latence — exportable en CSV |
+| 🗺️ **Découverte réseau** | Scan CIDR asynchrone rapide retournant IP, hostname et adresse MAC des hôtes actifs |
+| 🔌 **Port Scan** | Scan TCP avec profils intégrés (common, web, full) et profils personnalisés |
+| ⚡ **Speed Test** | Test de débit Ookla CLI lié à l'interface sélectionnée via `IP_BOUND_IF` / `SO_BINDTODEVICE` |
+| 🌐 **Mode serveur web** | Expose l'UI LanProbe complète en HTTPS sur le LAN — application desktop ou binaire headless standalone |
+| 🛡️ **Statut internet** | Double sonde (ICMP + HTTP) avec IP publique et pourcentage d'uptime |
+| 🎨 **Palettes de couleurs** | 6 palettes d'accent (Indigo, Cyan, Emerald, Rose, Amber, Slate) — mode sombre et clair |
 
 ---
 
-## Installation
+## 📦 Installation
 
-### Application desktop
+### 🖥️ Application desktop
 
 Les installeurs pré-compilés sont publiés sur **[GitHub Releases](https://github.com/Benjamin-Chianese/lanprobe/releases/latest)**.
 
@@ -66,7 +66,7 @@ L'application embarque un **auto-updater** — les mises à jour suivantes se fo
 
 ---
 
-### Serveur headless sur Debian / Ubuntu (sans interface graphique)
+### 🐧 Serveur headless sur Debian / Ubuntu (sans interface graphique)
 
 `lanprobe-server` est un binaire standalone qui sert l'UI web LanProbe complète en HTTPS. Il ne nécessite aucun environnement de bureau et tourne comme un service systemd.
 
@@ -121,7 +121,7 @@ https://<ip-du-serveur>:8443
 sudo ufw allow 8443/tcp
 ```
 
-#### Configuration
+#### ⚙️ Configuration
 
 Le fichier de service `/lib/systemd/system/lanprobe-server.service` utilise ces valeurs par défaut :
 
@@ -159,13 +159,13 @@ sudo apt remove lanprobe-server
 
 ---
 
-### Mode serveur web (application desktop)
+### 🔗 Mode serveur web (application desktop)
 
 L'application desktop peut également agir comme serveur — l'activer depuis **Paramètres → Mode serveur**. Cela diffuse les données en direct depuis votre machine desktop vers n'importe quel navigateur du LAN sans installer de paquet séparé.
 
 ---
 
-## Compiler depuis les sources
+## 🔧 Compiler depuis les sources
 
 **Prérequis**
 
@@ -194,7 +194,7 @@ cargo build -p lanprobe-server --release
 
 ---
 
-## Développement
+## 🛠️ Développement
 
 ```bash
 # Mode dev desktop avec hot-reload
@@ -213,7 +213,7 @@ cargo run -p lanprobe-server -- --host 0.0.0.0 --port 8443
 
 ---
 
-## Stack technique
+## 🏗️ Stack technique
 
 ```
 Backend   →  Rust (Tauri 2 · tokio · reqwest · axum)
@@ -242,7 +242,7 @@ lanprobe/
 
 ---
 
-## Compatibilité
+## 🖥️ Compatibilité
 
 | OS | Version | Architecture |
 |----|---------|--------------|
@@ -253,7 +253,7 @@ lanprobe/
 
 ---
 
-## Pipeline CI / Release
+## 🚀 Pipeline CI / Release
 
 Un workflow GitHub Actions compile toutes les plateformes en parallèle et publie une seule GitHub Release :
 
@@ -273,7 +273,7 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ---
 
-## Feuille de route
+## 🗺️ Feuille de route
 
 - [x] Gestion des profils réseau (IP statique / DHCP)
 - [x] Ping monitor multi-hôtes en temps réel avec graphiques de latence
@@ -291,7 +291,7 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ---
 
-## Contribuer
+## 🤝 Contribuer
 
 Les pull requests sont les bienvenues. Pour les changements significatifs, merci d'ouvrir une issue au préalable pour discuter de l'approche.
 

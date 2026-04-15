@@ -19,37 +19,37 @@
 
 ---
 
-## What is LanProbe?
+## 🔍 What is LanProbe?
 
 LanProbe replaces a handful of separate network utilities with one coherent interface. Built for engineers who switch between interfaces frequently, debug connectivity issues, or need to monitor multiple hosts at once.
 
-- **Switch network profiles in one click** — no more typing static IPs into system dialogs
-- **Watch multiple hosts in real time** with latency history and SLA statistics
-- **Scan your network** to discover who's on the subnet
-- **Test throughput** bound to a specific interface — no OS routing surprises
-- **Deploy headless** on a Debian server or Raspberry Pi — access the full UI from any browser on the LAN
+- 🔄 **Switch network profiles in one click** — no more typing static IPs into system dialogs
+- 📡 **Watch multiple hosts in real time** with latency history and SLA statistics
+- 🗺️ **Scan your network** to discover who's on the subnet
+- ⚡ **Test throughput** bound to a specific interface — no OS routing surprises
+- 🖥️ **Deploy headless** on a Debian server or Raspberry Pi — access the full UI from any browser on the LAN
 
 ---
 
-## Features
+## ✨ Features
 
 | Module | What it does |
 |--------|-------------|
-| **Network Profiles** | Save named static-IP or DHCP configurations, apply them in one click |
-| **Ping Monitor** | Continuous ICMP monitoring of multiple hosts, real-time latency graph, configurable alert thresholds |
-| **SLA Export** | Per-host uptime %, avg / min / max / P95 latency — exportable to CSV |
-| **Network Discovery** | Fast async CIDR scan returning IP, hostname and MAC address of live hosts |
-| **Port Scan** | TCP scan with built-in profiles (common, web, full) and custom profiles |
-| **Speed Test** | Ookla CLI speed test bound to the selected interface via `IP_BOUND_IF` / `SO_BINDTODEVICE` |
-| **Web Server Mode** | Expose the full LanProbe UI over HTTPS on the LAN — desktop app or standalone headless binary |
-| **Internet Status** | Dual-probe (ICMP + HTTP) internet health with public-IP info and uptime percentage |
-| **Color palettes** | 6 accent palettes (Indigo, Cyan, Emerald, Rose, Amber, Slate) — dark and light mode |
+| 🗂️ **Network Profiles** | Save named static-IP or DHCP configurations, apply them in one click |
+| 📡 **Ping Monitor** | Continuous ICMP monitoring of multiple hosts, real-time latency graph, configurable alert thresholds |
+| 📊 **SLA Export** | Per-host uptime %, avg / min / max / P95 latency — exportable to CSV |
+| 🗺️ **Network Discovery** | Fast async CIDR scan returning IP, hostname and MAC address of live hosts |
+| 🔌 **Port Scan** | TCP scan with built-in profiles (common, web, full) and custom profiles |
+| ⚡ **Speed Test** | Ookla CLI speed test bound to the selected interface via `IP_BOUND_IF` / `SO_BINDTODEVICE` |
+| 🌐 **Web Server Mode** | Expose the full LanProbe UI over HTTPS on the LAN — desktop app or standalone headless binary |
+| 🛡️ **Internet Status** | Dual-probe (ICMP + HTTP) internet health with public-IP info and uptime percentage |
+| 🎨 **Color Palettes** | 6 accent palettes (Indigo, Cyan, Emerald, Rose, Amber, Slate) — dark and light mode |
 
 ---
 
-## Installation
+## 📦 Installation
 
-### Desktop app
+### 🖥️ Desktop app
 
 Pre-built installers are published on **[GitHub Releases](https://github.com/Benjamin-Chianese/lanprobe/releases/latest)**.
 
@@ -66,7 +66,7 @@ The app ships an **auto-updater** — subsequent updates are one click from the 
 
 ---
 
-### Headless server on Debian / Ubuntu (no GUI required)
+### 🐧 Headless server on Debian / Ubuntu (no GUI required)
 
 `lanprobe-server` is a standalone binary that serves the full LanProbe web UI over HTTPS. It requires no desktop environment and runs as a systemd service.
 
@@ -121,7 +121,7 @@ https://<server-ip>:8443
 sudo ufw allow 8443/tcp
 ```
 
-#### Configuration
+#### ⚙️ Configuration
 
 The service file at `/lib/systemd/system/lanprobe-server.service` passes these defaults:
 
@@ -159,13 +159,13 @@ sudo apt remove lanprobe-server
 
 ---
 
-### Web Server Mode (desktop app)
+### 🔗 Web Server Mode (desktop app)
 
 The desktop app can also act as a server — enable it from **Settings → Server Mode**. This streams live data from your desktop machine to any browser on the LAN without installing a separate package.
 
 ---
 
-## Build from source
+## 🔧 Build from source
 
 **Prerequisites**
 
@@ -194,7 +194,7 @@ cargo build -p lanprobe-server --release
 
 ---
 
-## Development
+## 🛠️ Development
 
 ```bash
 # Hot-reload desktop dev mode
@@ -213,7 +213,7 @@ cargo run -p lanprobe-server -- --host 0.0.0.0 --port 8443
 
 ---
 
-## Tech Stack
+## 🏗️ Tech Stack
 
 ```
 Backend   →  Rust (Tauri 2 · tokio · reqwest · axum)
@@ -242,7 +242,7 @@ lanprobe/
 
 ---
 
-## Compatibility
+## 🖥️ Compatibility
 
 | OS | Version | Architecture |
 |----|---------|--------------|
@@ -253,7 +253,7 @@ lanprobe/
 
 ---
 
-## CI / Release Pipeline
+## 🚀 CI / Release Pipeline
 
 One GitHub Actions workflow builds all platforms in parallel and publishes a single GitHub Release:
 
@@ -273,7 +273,7 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ---
 
-## Roadmap
+## 🗺️ Roadmap
 
 - [x] Network profile management (static IP / DHCP)
 - [x] Real-time multi-host ping monitor with latency graphs
@@ -291,7 +291,7 @@ git tag v1.0.0 && git push origin v1.0.0
 
 ---
 
-## Contributing
+## 🤝 Contributing
 
 Pull requests are welcome. For significant changes please open an issue first to discuss the approach.
 
