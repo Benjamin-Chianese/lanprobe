@@ -1,0 +1,10 @@
+{
+  "bundle": {
+    "resources": ["resources/linux/*"],
+    "linux": {
+      "deb": {
+        "postInstallScript": "packaging/debian/postinst"
+      }
+    }
+  }
+}

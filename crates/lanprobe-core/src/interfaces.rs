@@ -1,0 +1,310 @@
+use serde::{Deserialize, Serialize};
+use super::proc::sync_cmd;
+
+#[derive(Debug, Serialize, Deserialize, Clone, Default)]
+pub struct InterfaceDetails {
+    pub name: String,
+    pub ip: Option<String>,
+    pub subnet: Option<String>,
+    pub gateway: Option<String>,
+    pub dns: Vec<String>,
+    pub dhcp_enabled: bool,
+    pub is_up: bool,
+    /// Nom BSD réel de l'interface (en0, en1…). Populé sur macOS, où `name`
+    /// est le service networksetup ("Wi-Fi", "Ethernet") — les CLI comme
+    /// `speedtest -I` attendent l'ifname BSD et pas le service.
+    #[serde(default)]
+    pub bsd_name: Option<String>,
+}
+
+/// Mappe un service networksetup ("Wi-Fi") vers l'ifname BSD ("en0") en
+/// parsant `networksetup -listallhardwareports`.
+#[cfg(target_os = "macos")]
+pub fn bsd_name_for_service(service: &str) -> Option<String> {
+    let text = sync_cmd("networksetup").arg("-listallhardwareports").output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    let mut current_port: Option<String> = None;
+    for line in text.lines() {
+        if let Some(p) = line.strip_prefix("Hardware Port:") {
+            current_port = Some(p.trim().to_string());
+        } else if let Some(dev) = line.strip_prefix("Device:") {
+            if current_port.as_deref() == Some(service) {
+                return Some(dev.trim().to_string());
+            }
+        }
+    }
+    None
+}
+
+pub fn list_interfaces() -> Vec<String> {
+    #[cfg(target_os = "windows")]
+    { list_interfaces_windows() }
+    #[cfg(target_os = "macos")]
+    { list_interfaces_macos() }
+    #[cfg(target_os = "linux")]
+    { list_interfaces_linux() }
+}
+
+pub fn get_interface_details(name: &str) -> InterfaceDetails {
+    #[cfg(target_os = "windows")]
+    { get_details_windows(name) }
+    #[cfg(target_os = "macos")]
+    { get_details_macos(name) }
+    #[cfg(target_os = "linux")]
+    { get_details_linux(name) }
+}
+
+#[cfg(target_os = "windows")]
+fn list_interfaces_windows() -> Vec<String> {
+    // PowerShell Get-NetAdapter — locale-indépendant. On force UTF-8 pour
+    // éviter que PowerShell retourne du UTF-16 / code-page système (problème
+    // courant sur Windows FR qui casse les noms d'interfaces accentués).
+    // HardwareInterface=$true exclut Wintun, vEthernet, Hyper-V, loopback.
+    let ps = r#"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Get-NetAdapter | Where-Object { $_.HardwareInterface -eq $true } | Select-Object -ExpandProperty Name"#;
+    let out = sync_cmd("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", ps])
+        .output();
+    if let Ok(o) = out {
+        let text = String::from_utf8_lossy(&o.stdout).into_owned();
+        let list: Vec<String> = text.lines()
+            .map(|l| l.trim().to_string())
+            .filter(|l| !l.is_empty())
+            .collect();
+        if !list.is_empty() {
+            return list;
+        }
+    }
+    // Fallback minimal si PowerShell est indisponible (rare) — on accepte les
+    // interfaces IPv4 listées par `netsh interface ipv4 show interfaces` et on
+    // rejette explicitement les noms de tunnel/virtuels connus.
+    let text = sync_cmd("netsh")
+        .args(["interface", "ipv4", "show", "interfaces"])
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    text.lines()
+        .skip(3)
+        .filter_map(|l| {
+            let mut it = l.split_whitespace();
+            let _idx = it.next()?;
+            let _met = it.next()?;
+            let _mtu = it.next()?;
+            let _state = it.next()?;
+            let name = it.collect::<Vec<_>>().join(" ");
+            if name.is_empty() { return None; }
+            let low = name.to_lowercase();
+            if low.contains("wintun") || low.contains("loopback") || low.contains("vethernet") || low.contains("hyper-v") || low.contains("isatap") || low.contains("teredo") { return None; }
+            Some(name)
+        })
+        .collect()
+}
+
+#[cfg(target_os = "macos")]
+fn list_interfaces_macos() -> Vec<String> {
+    let text = sync_cmd("networksetup")
+        .arg("-listallnetworkservices")
+        .output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    text.lines()
+        .skip(1)
+        .filter(|l| !l.starts_with('*') && !l.is_empty())
+        .map(String::from)
+        .collect()
+}
+
+#[cfg(target_os = "linux")]
+fn list_interfaces_linux() -> Vec<String> {
+    let text = sync_cmd("ip").args(["link", "show"]).output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    text.lines()
+        .filter(|l| !l.starts_with(' ') && l.contains(": "))
+        .filter_map(|l| {
+            let name = l.split(':').nth(1)?.trim().split('@').next()?.to_string();
+            if name != "lo" { Some(name) } else { None }
+        })
+        .collect()
+}
+
+#[cfg(target_os = "windows")]
+fn get_details_windows(name: &str) -> InterfaceDetails {
+    // On utilise PowerShell avec des APIs .NET locale-indépendantes plutôt que
+    // `netsh` dont la sortie est localisée (FR: "Adresse IP :", EN: "IP Address:").
+    // Format de sortie : "IP|PrefixLen|Gateway|DNS1,DNS2|DHCP"
+    // Les valeurs absentes sont vides (ex: "||" si pas de gateway).
+    let ps = format!(
+        r#"[Console]::OutputEncoding = [System.Text.Encoding]::UTF8;
+$a = Get-NetIPAddress -InterfaceAlias '{name}' -AddressFamily IPv4 -ErrorAction SilentlyContinue | Select-Object -First 1;
+$g = (Get-NetRoute -InterfaceAlias '{name}' -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | Select-Object -First 1).NextHop;
+$dns = (Get-DnsClientServerAddress -InterfaceAlias '{name}' -AddressFamily IPv4 -ErrorAction SilentlyContinue).ServerAddresses -join ',';
+$dhcp = (Get-NetIPInterface -InterfaceAlias '{name}' -AddressFamily IPv4 -ErrorAction SilentlyContinue).Dhcp;
+Write-Output "$($a.IPAddress)|$($a.PrefixLength)|$g|$dns|$dhcp""#,
+        name = name.replace('\'', "''")
+    );
+    let mut d = InterfaceDetails { name: name.to_string(), is_up: true, ..Default::default() };
+    let out = sync_cmd("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &ps])
+        .output();
+    if let Ok(o) = out {
+        let text = String::from_utf8_lossy(&o.stdout).into_owned();
+        // Cherche la première ligne non-vide qui ressemble à notre format
+        if let Some(line) = text.lines().find(|l| l.contains('|')) {
+            let parts: Vec<&str> = line.trim().splitn(5, '|').collect();
+            // IP
+            if let Some(ip) = parts.first().map(|s| s.trim()).filter(|s| !s.is_empty()) {
+                d.ip = Some(ip.to_string());
+            }
+            // PrefixLength → mask dotted
+            if let Some(prefix) = parts.get(1).and_then(|s| s.trim().parse::<u32>().ok()) {
+                let mask = if prefix == 0 { 0u32 } else { !0u32 << (32 - prefix) };
+                d.subnet = Some(format!(
+                    "{}.{}.{}.{}",
+                    (mask >> 24) & 0xFF, (mask >> 16) & 0xFF,
+                    (mask >> 8) & 0xFF, mask & 0xFF
+                ));
+            }
+            // Gateway
+            if let Some(gw) = parts.get(2).map(|s| s.trim()).filter(|s| !s.is_empty() && *s != "0.0.0.0") {
+                d.gateway = Some(gw.to_string());
+            }
+            // DNS
+            if let Some(dns_str) = parts.get(3).map(|s| s.trim()).filter(|s| !s.is_empty()) {
+                d.dns = dns_str.split(',').map(|s| s.trim().to_string()).filter(|s| !s.is_empty()).collect();
+            }
+            // DHCP
+            if let Some(dhcp) = parts.get(4).map(|s| s.trim().to_lowercase()) {
+                d.dhcp_enabled = dhcp == "enabled";
+            }
+        }
+    }
+    d
+}
+
+#[cfg(target_os = "macos")]
+fn get_details_macos(name: &str) -> InterfaceDetails {
+    let text = sync_cmd("networksetup").args(["-getinfo", name]).output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    let mut d = InterfaceDetails { name: name.to_string(), ip: None, subnet: None, gateway: None, dns: vec![], dhcp_enabled: false, is_up: true, bsd_name: bsd_name_for_service(name) };
+    for line in text.lines() {
+        if line.starts_with("IP address:") {
+            d.ip = line.splitn(2, ':').nth(1).map(|s| s.trim().to_string());
+        } else if line.starts_with("Subnet mask:") {
+            d.subnet = line.splitn(2, ':').nth(1).map(|s| s.trim().to_string());
+        } else if line.starts_with("Router:") {
+            d.gateway = line.splitn(2, ':').nth(1).map(|s| s.trim().to_string());
+        } else if line.contains("DHCP Configuration") {
+            d.dhcp_enabled = true;
+        }
+    }
+    let dns_text = sync_cmd("networksetup").args(["-getdnsservers", name]).output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    for line in dns_text.lines() {
+        let l = line.trim();
+        if !l.is_empty() && !l.starts_with("There") { d.dns.push(l.to_string()); }
+    }
+    // Fallback: DNS from DHCP via /etc/resolv.conf
+    if d.dns.is_empty() {
+        if let Ok(resolv) = std::fs::read_to_string("/etc/resolv.conf") {
+            for line in resolv.lines() {
+                if line.starts_with("nameserver") {
+                    if let Some(dns) = line.split_whitespace().nth(1) {
+                        d.dns.push(dns.to_string());
+                    }
+                }
+            }
+        }
+    }
+    d
+}
+
+#[cfg(target_os = "linux")]
+fn get_details_linux(name: &str) -> InterfaceDetails {
+    let text = sync_cmd("ip").args(["addr", "show", name]).output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    let text = text.as_str();
+    let mut d = InterfaceDetails { name: name.to_string(), is_up: true, ..Default::default() };
+    for line in text.lines() {
+        let line = line.trim();
+        if line.starts_with("inet ") && !line.starts_with("inet6") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if let Some(cidr) = parts.get(1) {
+                let mut split = cidr.splitn(2, '/');
+                d.ip = split.next().map(String::from);
+                if let Some(prefix) = split.next() {
+                    d.subnet = prefix.parse::<u32>().ok().map(cidr_to_mask);
+                }
+            }
+        }
+    }
+    let gw_text = sync_cmd("ip").args(["route", "show", "default"]).output()
+        .map(|o| String::from_utf8_lossy(&o.stdout).into_owned())
+        .unwrap_or_default();
+    d.gateway = gw_text.lines()
+        .find(|l| l.starts_with("default"))
+        .and_then(|l| l.split_whitespace().nth(2))
+        .map(String::from);
+    if let Ok(resolv) = std::fs::read_to_string("/etc/resolv.conf") {
+        for line in resolv.lines() {
+            if line.starts_with("nameserver") {
+                if let Some(dns) = line.split_whitespace().nth(1) {
+                    d.dns.push(dns.to_string());
+                }
+            }
+        }
+    }
+    // Récupère la méthode IPv4 via nmcli sur la connexion active attachée
+    // au device. "auto" = DHCP, "manual" = statique. L'ancienne heuristique
+    // `systemctl is-active NetworkManager` renvoyait toujours true et faisait
+    // croire qu'un profil statique appliqué était en DHCP.
+    let conn = sync_cmd("nmcli")
+        .args(["-t", "-g", "GENERAL.CONNECTION", "device", "show", name])
+        .output()
+        .ok()
+        .and_then(|o| if o.status.success() {
+            Some(String::from_utf8_lossy(&o.stdout).trim().to_string())
+        } else { None })
+        .filter(|s| !s.is_empty() && s != "--");
+    if let Some(conn) = conn {
+        let method = sync_cmd("nmcli")
+            .args(["-t", "-g", "ipv4.method", "connection", "show", &conn])
+            .output()
+            .ok()
+            .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+            .unwrap_or_default();
+        d.dhcp_enabled = method == "auto";
+    }
+    d
+}
+
+fn cidr_to_mask(prefix: u32) -> String {
+    if prefix == 0 { return "0.0.0.0".to_string(); }
+    if prefix > 32 { return "255.255.255.255".to_string(); }
+    let mask = !0u32 << (32 - prefix);
+    format!("{}.{}.{}.{}", (mask >> 24) & 0xFF, (mask >> 16) & 0xFF, (mask >> 8) & 0xFF, mask & 0xFF)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_list_interfaces_returns_vec() {
+        let interfaces = list_interfaces();
+        assert!(interfaces.len() >= 0);
+    }
+
+    #[test]
+    fn test_cidr_to_mask_24() {
+        assert_eq!(cidr_to_mask(24), "255.255.255.0");
+    }
+
+    #[test]
+    fn test_cidr_to_mask_16() {
+        assert_eq!(cidr_to_mask(16), "255.255.0.0");
+    }
+}

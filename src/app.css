@@ -1,0 +1,390 @@
+/* ─── Glass & Depth tokens ──────────────────────────── */
+
+:root {
+  /* Backgrounds — deep navy base */
+  --ep-bg-primary:    #080c14;
+  --ep-bg-secondary:  #0d1220;
+  --ep-bg-tertiary:   #131929;
+  --ep-bg-hover:      rgba(99,102,241,0.06);
+
+  /* Glass overlays (semi-transparent panels) */
+  --ep-glass-bg:      rgba(255,255,255,0.04);
+  --ep-glass-bg-md:   rgba(255,255,255,0.07);
+  --ep-glass-border:  rgba(255,255,255,0.08);
+  --ep-glass-border-strong: rgba(255,255,255,0.14);
+
+  /* Borders */
+  --ep-border:        rgba(255,255,255,0.07);
+  --ep-border-strong: rgba(255,255,255,0.14);
+
+  /* Text */
+  --ep-text-primary:   #e8eaf0;
+  --ep-text-secondary: #8892a4;
+  --ep-text-muted:     #55627a;
+  --ep-text-dim:       #3d4a5c;
+
+  /* Accent — indigo/violet */
+  --ep-accent:         #6366f1;
+  --ep-accent-bright:  #818cf8;
+  --ep-accent-dim:     rgba(99,102,241,0.15);
+  --ep-accent-glow:    rgba(99,102,241,0.35);
+
+  /* Gradient accent (sidebar active, badges) */
+  --ep-accent-grad: linear-gradient(135deg, #6366f1, #8b5cf6);
+
+  /* Status */
+  --ep-success: #22c55e;
+  --ep-warning: #f59e0b;
+  --ep-danger:  #ef4444;
+  --ep-info:    #06b6d4;
+}
+
+[data-theme='dark'] {
+  --ep-bg-primary:    #080c14;
+  --ep-bg-secondary:  #0d1220;
+  --ep-bg-tertiary:   #131929;
+  --ep-bg-hover:      rgba(99,102,241,0.06);
+  --ep-glass-bg:      rgba(255,255,255,0.04);
+  --ep-glass-bg-md:   rgba(255,255,255,0.07);
+  --ep-glass-border:  rgba(255,255,255,0.08);
+  --ep-glass-border-strong: rgba(255,255,255,0.14);
+  --ep-border:        rgba(255,255,255,0.07);
+  --ep-border-strong: rgba(255,255,255,0.14);
+  --ep-text-primary:   #e8eaf0;
+  --ep-text-secondary: #8892a4;
+  --ep-text-muted:     #55627a;
+  --ep-text-dim:       #3d4a5c;
+  --ep-accent:         #6366f1;
+  --ep-accent-bright:  #818cf8;
+  --ep-accent-dim:     rgba(99,102,241,0.15);
+  --ep-accent-glow:    rgba(99,102,241,0.35);
+  --ep-accent-grad:    linear-gradient(135deg, #6366f1, #8b5cf6);
+  --ep-success: #22c55e;
+  --ep-warning: #f59e0b;
+  --ep-danger:  #ef4444;
+  --ep-info:    #06b6d4;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark']) {
+    --ep-bg-primary:    #f0f2f8;
+    --ep-bg-secondary:  #ffffff;
+    --ep-bg-tertiary:   #f8f9fc;
+    --ep-bg-hover:      rgba(99,102,241,0.05);
+    --ep-glass-bg:      rgba(255,255,255,0.7);
+    --ep-glass-bg-md:   rgba(255,255,255,0.85);
+    --ep-glass-border:  rgba(99,102,241,0.12);
+    --ep-glass-border-strong: rgba(99,102,241,0.22);
+    --ep-border:        rgba(99,102,241,0.12);
+    --ep-border-strong: rgba(99,102,241,0.22);
+    --ep-text-primary:   #0f1220;
+    --ep-text-secondary: #4a5568;
+    --ep-text-muted:     #718096;
+    --ep-text-dim:       #a0aec0;
+    --ep-accent:         #4f46e5;
+    --ep-accent-bright:  #6366f1;
+    --ep-accent-dim:     rgba(79,70,229,0.10);
+    --ep-accent-glow:    rgba(79,70,229,0.25);
+    --ep-accent-grad:    linear-gradient(135deg, #4f46e5, #7c3aed);
+    --ep-success: #16a34a;
+    --ep-warning: #d97706;
+    --ep-danger:  #dc2626;
+    --ep-info:    #0891b2;
+  }
+}
+
+[data-theme='light'] {
+  --ep-bg-primary:    #f0f2f8;
+  --ep-bg-secondary:  #ffffff;
+  --ep-bg-tertiary:   #f8f9fc;
+  --ep-bg-hover:      rgba(99,102,241,0.05);
+  --ep-glass-bg:      rgba(255,255,255,0.7);
+  --ep-glass-bg-md:   rgba(255,255,255,0.85);
+  --ep-glass-border:  rgba(99,102,241,0.12);
+  --ep-glass-border-strong: rgba(99,102,241,0.22);
+  --ep-border:        rgba(99,102,241,0.12);
+  --ep-border-strong: rgba(99,102,241,0.22);
+  --ep-text-primary:   #0f1220;
+  --ep-text-secondary: #4a5568;
+  --ep-text-muted:     #718096;
+  --ep-text-dim:       #a0aec0;
+  --ep-accent:         #4f46e5;
+  --ep-accent-bright:  #6366f1;
+  --ep-accent-dim:     rgba(79,70,229,0.10);
+  --ep-accent-glow:    rgba(79,70,229,0.25);
+  --ep-accent-grad:    linear-gradient(135deg, #4f46e5, #7c3aed);
+  --ep-success: #16a34a;
+  --ep-warning: #d97706;
+  --ep-danger:  #dc2626;
+  --ep-info:    #0891b2;
+}
+
+/* ─── Palette overrides ──────────────────────────────
+   Only accent + tinted backgrounds change per palette.
+   Indigo is the default (already defined in :root / [data-theme]).
+   Each block covers: dark mode, explicit light, system light.
+   ──────────────────────────────────────────────────── */
+
+/* Cyan — dark */
+[data-palette='cyan'] {
+  --ep-accent:        #06b6d4;
+  --ep-accent-bright: #22d3ee;
+  --ep-accent-dim:    rgba(6,182,212,0.15);
+  --ep-accent-glow:   rgba(6,182,212,0.35);
+  --ep-accent-grad:   linear-gradient(135deg, #06b6d4, #0891b2);
+  --ep-bg-primary:    #0d1a1f;
+  --ep-bg-secondary:  #0e1e27;
+  --ep-bg-tertiary:   #122028;
+  --ep-bg-hover:      rgba(6,182,212,0.06);
+}
+/* Cyan — light */
+[data-theme='light'][data-palette='cyan'] {
+  --ep-accent:              #0891b2;
+  --ep-accent-bright:       #06b6d4;
+  --ep-accent-dim:          rgba(8,145,178,0.10);
+  --ep-accent-glow:         rgba(8,145,178,0.25);
+  --ep-accent-grad:         linear-gradient(135deg, #0891b2, #0e7490);
+  --ep-bg-primary:          #f0f8fa;
+  --ep-bg-tertiary:         #e8f5f8;
+  --ep-bg-hover:            rgba(8,145,178,0.05);
+  --ep-glass-border:        rgba(8,145,178,0.12);
+  --ep-glass-border-strong: rgba(8,145,178,0.22);
+  --ep-border:              rgba(8,145,178,0.12);
+  --ep-border-strong:       rgba(8,145,178,0.22);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-palette='cyan'] {
+    --ep-accent:              #0891b2;
+    --ep-accent-bright:       #06b6d4;
+    --ep-accent-dim:          rgba(8,145,178,0.10);
+    --ep-accent-glow:         rgba(8,145,178,0.25);
+    --ep-accent-grad:         linear-gradient(135deg, #0891b2, #0e7490);
+    --ep-bg-primary:          #f0f8fa;
+    --ep-bg-tertiary:         #e8f5f8;
+    --ep-bg-hover:            rgba(8,145,178,0.05);
+    --ep-glass-border:        rgba(8,145,178,0.12);
+    --ep-glass-border-strong: rgba(8,145,178,0.22);
+    --ep-border:              rgba(8,145,178,0.12);
+    --ep-border-strong:       rgba(8,145,178,0.22);
+  }
+}
+
+/* Emerald — dark */
+[data-palette='emerald'] {
+  --ep-accent:        #10b981;
+  --ep-accent-bright: #34d399;
+  --ep-accent-dim:    rgba(16,185,129,0.15);
+  --ep-accent-glow:   rgba(16,185,129,0.35);
+  --ep-accent-grad:   linear-gradient(135deg, #10b981, #059669);
+  --ep-bg-primary:    #0d1a14;
+  --ep-bg-secondary:  #0e1f17;
+  --ep-bg-tertiary:   #122018;
+  --ep-bg-hover:      rgba(16,185,129,0.06);
+}
+/* Emerald — light */
+[data-theme='light'][data-palette='emerald'] {
+  --ep-accent:              #059669;
+  --ep-accent-bright:       #10b981;
+  --ep-accent-dim:          rgba(5,150,105,0.10);
+  --ep-accent-glow:         rgba(5,150,105,0.25);
+  --ep-accent-grad:         linear-gradient(135deg, #059669, #047857);
+  --ep-bg-primary:          #f0faf5;
+  --ep-bg-tertiary:         #e6f7ee;
+  --ep-bg-hover:            rgba(5,150,105,0.05);
+  --ep-glass-border:        rgba(5,150,105,0.12);
+  --ep-glass-border-strong: rgba(5,150,105,0.22);
+  --ep-border:              rgba(5,150,105,0.12);
+  --ep-border-strong:       rgba(5,150,105,0.22);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-palette='emerald'] {
+    --ep-accent:              #059669;
+    --ep-accent-bright:       #10b981;
+    --ep-accent-dim:          rgba(5,150,105,0.10);
+    --ep-accent-glow:         rgba(5,150,105,0.25);
+    --ep-accent-grad:         linear-gradient(135deg, #059669, #047857);
+    --ep-bg-primary:          #f0faf5;
+    --ep-bg-tertiary:         #e6f7ee;
+    --ep-bg-hover:            rgba(5,150,105,0.05);
+    --ep-glass-border:        rgba(5,150,105,0.12);
+    --ep-glass-border-strong: rgba(5,150,105,0.22);
+    --ep-border:              rgba(5,150,105,0.12);
+    --ep-border-strong:       rgba(5,150,105,0.22);
+  }
+}
+
+/* Rose — dark */
+[data-palette='rose'] {
+  --ep-accent:        #f43f5e;
+  --ep-accent-bright: #fb7185;
+  --ep-accent-dim:    rgba(244,63,94,0.15);
+  --ep-accent-glow:   rgba(244,63,94,0.35);
+  --ep-accent-grad:   linear-gradient(135deg, #f43f5e, #e11d48);
+  --ep-bg-primary:    #1a0d14;
+  --ep-bg-secondary:  #1f0e17;
+  --ep-bg-tertiary:   #210f19;
+  --ep-bg-hover:      rgba(244,63,94,0.06);
+}
+/* Rose — light */
+[data-theme='light'][data-palette='rose'] {
+  --ep-accent:              #e11d48;
+  --ep-accent-bright:       #f43f5e;
+  --ep-accent-dim:          rgba(225,29,72,0.10);
+  --ep-accent-glow:         rgba(225,29,72,0.25);
+  --ep-accent-grad:         linear-gradient(135deg, #e11d48, #be123c);
+  --ep-bg-primary:          #fdf2f4;
+  --ep-bg-tertiary:         #fce8ec;
+  --ep-bg-hover:            rgba(225,29,72,0.05);
+  --ep-glass-border:        rgba(225,29,72,0.12);
+  --ep-glass-border-strong: rgba(225,29,72,0.22);
+  --ep-border:              rgba(225,29,72,0.12);
+  --ep-border-strong:       rgba(225,29,72,0.22);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-palette='rose'] {
+    --ep-accent:              #e11d48;
+    --ep-accent-bright:       #f43f5e;
+    --ep-accent-dim:          rgba(225,29,72,0.10);
+    --ep-accent-glow:         rgba(225,29,72,0.25);
+    --ep-accent-grad:         linear-gradient(135deg, #e11d48, #be123c);
+    --ep-bg-primary:          #fdf2f4;
+    --ep-bg-tertiary:         #fce8ec;
+    --ep-bg-hover:            rgba(225,29,72,0.05);
+    --ep-glass-border:        rgba(225,29,72,0.12);
+    --ep-glass-border-strong: rgba(225,29,72,0.22);
+    --ep-border:              rgba(225,29,72,0.12);
+    --ep-border-strong:       rgba(225,29,72,0.22);
+  }
+}
+
+/* Amber — dark */
+[data-palette='amber'] {
+  --ep-accent:        #f59e0b;
+  --ep-accent-bright: #fbbf24;
+  --ep-accent-dim:    rgba(245,158,11,0.15);
+  --ep-accent-glow:   rgba(245,158,11,0.35);
+  --ep-accent-grad:   linear-gradient(135deg, #f59e0b, #d97706);
+  --ep-bg-primary:    #1a1408;
+  --ep-bg-secondary:  #1f1a08;
+  --ep-bg-tertiary:   #221d09;
+  --ep-bg-hover:      rgba(245,158,11,0.06);
+}
+/* Amber — light */
+[data-theme='light'][data-palette='amber'] {
+  --ep-accent:              #d97706;
+  --ep-accent-bright:       #f59e0b;
+  --ep-accent-dim:          rgba(217,119,6,0.10);
+  --ep-accent-glow:         rgba(217,119,6,0.25);
+  --ep-accent-grad:         linear-gradient(135deg, #d97706, #b45309);
+  --ep-bg-primary:          #fdf8ee;
+  --ep-bg-tertiary:         #fdf0d0;
+  --ep-bg-hover:            rgba(217,119,6,0.05);
+  --ep-glass-border:        rgba(217,119,6,0.12);
+  --ep-glass-border-strong: rgba(217,119,6,0.22);
+  --ep-border:              rgba(217,119,6,0.12);
+  --ep-border-strong:       rgba(217,119,6,0.22);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-palette='amber'] {
+    --ep-accent:              #d97706;
+    --ep-accent-bright:       #f59e0b;
+    --ep-accent-dim:          rgba(217,119,6,0.10);
+    --ep-accent-glow:         rgba(217,119,6,0.25);
+    --ep-accent-grad:         linear-gradient(135deg, #d97706, #b45309);
+    --ep-bg-primary:          #fdf8ee;
+    --ep-bg-tertiary:         #fdf0d0;
+    --ep-bg-hover:            rgba(217,119,6,0.05);
+    --ep-glass-border:        rgba(217,119,6,0.12);
+    --ep-glass-border-strong: rgba(217,119,6,0.22);
+    --ep-border:              rgba(217,119,6,0.12);
+    --ep-border-strong:       rgba(217,119,6,0.22);
+  }
+}
+
+/* Slate — dark */
+[data-palette='slate'] {
+  --ep-accent:        #64748b;
+  --ep-accent-bright: #94a3b8;
+  --ep-accent-dim:    rgba(100,116,139,0.15);
+  --ep-accent-glow:   rgba(100,116,139,0.35);
+  --ep-accent-grad:   linear-gradient(135deg, #64748b, #475569);
+  --ep-bg-primary:    #0f1218;
+  --ep-bg-secondary:  #131920;
+  --ep-bg-tertiary:   #171e27;
+  --ep-bg-hover:      rgba(100,116,139,0.06);
+}
+/* Slate — light */
+[data-theme='light'][data-palette='slate'] {
+  --ep-accent:              #475569;
+  --ep-accent-bright:       #64748b;
+  --ep-accent-dim:          rgba(71,85,105,0.10);
+  --ep-accent-glow:         rgba(71,85,105,0.25);
+  --ep-accent-grad:         linear-gradient(135deg, #475569, #334155);
+  --ep-bg-primary:          #f4f6f8;
+  --ep-bg-tertiary:         #edf0f4;
+  --ep-bg-hover:            rgba(71,85,105,0.05);
+  --ep-glass-border:        rgba(71,85,105,0.12);
+  --ep-glass-border-strong: rgba(71,85,105,0.22);
+  --ep-border:              rgba(71,85,105,0.12);
+  --ep-border-strong:       rgba(71,85,105,0.22);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme='dark'])[data-palette='slate'] {
+    --ep-accent:              #475569;
+    --ep-accent-bright:       #64748b;
+    --ep-accent-dim:          rgba(71,85,105,0.10);
+    --ep-accent-glow:         rgba(71,85,105,0.25);
+    --ep-accent-grad:         linear-gradient(135deg, #475569, #334155);
+    --ep-bg-primary:          #f4f6f8;
+    --ep-bg-tertiary:         #edf0f4;
+    --ep-bg-hover:            rgba(71,85,105,0.05);
+    --ep-glass-border:        rgba(71,85,105,0.12);
+    --ep-glass-border-strong: rgba(71,85,105,0.22);
+    --ep-border:              rgba(71,85,105,0.12);
+    --ep-border-strong:       rgba(71,85,105,0.22);
+  }
+}
+
+:root {
+  --ep-radius-sm: 5px;
+  --ep-radius-md: 8px;
+  --ep-radius-lg: 12px;
+  --ep-font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --ep-font-mono: 'Geist Mono', ui-monospace, 'SF Mono', monospace;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--ep-font-sans);
+  background: var(--ep-bg-primary);
+  color: var(--ep-text-primary);
+}
+
+/* Scrollbar glass style */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--ep-glass-border-strong); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--ep-accent); }
+
+/* Global select/input styling — Linux dark mode fix */
+select {
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--ep-bg-secondary);
+  border: 1px solid var(--ep-border);
+  color: var(--ep-text-primary);
+  border-radius: var(--ep-radius-md);
+  padding: 5px 10px;
+  font-family: var(--ep-font-sans);
+  font-size: 13px;
+  cursor: pointer;
+}
+select option {
+  background: var(--ep-bg-secondary);
+  color: var(--ep-text-primary);
+}
+select:focus { outline: none; border-color: var(--ep-accent); }
+select:disabled { opacity: 0.55; cursor: not-allowed; }

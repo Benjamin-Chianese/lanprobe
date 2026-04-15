@@ -1,0 +1,25 @@
+#!/bin/bash
+# postinstall — exécuté par installer(8) en tant que root à la fin de
+# l'installation du .pkg LanProbe. Son rôle : poser /etc/sudoers.d/lanprobe
+# pour autoriser networksetup sans prompt de mot de passe.
+#
+# NB : exit 0 est obligatoire même en cas d'erreur non critique, sinon
+# l'utilisateur voit "Installation a échoué" alors que l'app est déjà en place.
+
+set +e
+
+SUDOERS_FILE="/etc/sudoers.d/lanprobe"
+TMP=$(mktemp)
+
+cat > "$TMP" <<'EOF'
+%admin ALL=(root) NOPASSWD: /usr/sbin/networksetup
+EOF
+
+# Valide la syntaxe avant d'installer le fichier — un sudoers cassé empêche
+# tout sudo sur la machine, on n'a pas le droit de rater.
+if /usr/sbin/visudo -cf "$TMP" >/dev/null 2>&1; then
+  install -o root -g wheel -m 440 "$TMP" "$SUDOERS_FILE"
+fi
+rm -f "$TMP"
+
+exit 0

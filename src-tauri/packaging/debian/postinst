@@ -1,0 +1,9 @@
+#!/bin/sh
+# Donne les droits raw-socket au binaire LanProbe pour que le monitoring
+# réseau (ping ICMP, scan réseau) fonctionne sans lancer l'app en root.
+# Cette permission est perdue lors d'une mise à jour — ce script la restaure.
+set -e
+
+if command -v setcap >/dev/null 2>&1; then
+    setcap cap_net_raw,cap_net_admin+ep /usr/bin/lanprobe 2>/dev/null || true
+fi

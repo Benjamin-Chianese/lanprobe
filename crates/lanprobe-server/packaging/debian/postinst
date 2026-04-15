@@ -1,0 +1,26 @@
+#!/bin/sh
+set -e
+
+# Utilisateur système dédié. `--system` = pas de home, pas de login shell.
+if ! id lanprobe >/dev/null 2>&1; then
+    adduser --system --group --no-create-home --home /var/lib/lanprobe lanprobe
+fi
+
+mkdir -p /var/lib/lanprobe
+chown -R lanprobe:lanprobe /var/lib/lanprobe
+chmod 750 /var/lib/lanprobe
+
+# CAP_NET_RAW pour ICMP, CAP_NET_ADMIN pour apply_static / apply_dhcp.
+# +ep = effective+permitted, appliqué au binaire plutôt qu'à l'utilisateur.
+if command -v setcap >/dev/null 2>&1; then
+    setcap 'cap_net_raw,cap_net_admin+ep' /usr/bin/lanprobe-server || true
+fi
+
+# Active et démarre le service si systemd est disponible.
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+    systemctl enable lanprobe-server.service || true
+    systemctl start lanprobe-server.service || true
+fi
+
+exit 0

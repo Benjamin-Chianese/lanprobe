@@ -1,0 +1,19 @@
+#!/bin/sh
+set -e
+
+# Sur `purge`, on supprime le user et /var/lib/lanprobe (contient users.json
+# et cert TLS). Sur `remove` simple, on garde les données.
+case "$1" in
+    purge)
+        if id lanprobe >/dev/null 2>&1; then
+            deluser --system lanprobe || true
+        fi
+        rm -rf /var/lib/lanprobe
+        ;;
+esac
+
+if [ -d /run/systemd/system ]; then
+    systemctl daemon-reload || true
+fi
+
+exit 0

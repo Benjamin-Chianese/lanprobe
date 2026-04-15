@@ -1,0 +1,75 @@
+[package]
+name = "lanprobe-server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "LanProbe headless — expose the LanProbe UI over HTTP(S) for remote access"
+
+[lib]
+name = "lanprobe_server"
+path = "src/lib.rs"
+
+[[bin]]
+name = "lanprobe-server"
+path = "src/main.rs"
+
+[dependencies]
+lanprobe-core = { path = "../lanprobe-core" }
+
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+
+# HTTP + WebSocket
+axum = { version = "0.8", features = ["ws", "macros"] }
+axum-server = { version = "0.7", features = ["tls-rustls"] }
+hyper = { version = "1", features = ["http1", "http2"] }
+hyper-util = { version = "0.1", features = ["tokio", "server-auto"] }
+tower = "0.5"
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+
+# Embedded static assets
+rust-embed = { version = "8", features = ["interpolate-folder-path"] }
+mime_guess = "2"
+
+# Auth
+argon2 = "0.5"
+rand = { workspace = true }
+getrandom = "0.2"
+base64 = "0.22"
+cookie = { version = "0.18", features = ["percent-encode"] }
+
+# Self-signed TLS + protocol sniffing
+rcgen = "0.13"
+tokio-rustls = "0.26"
+rustls = "0.23"
+rustls-pemfile = "2"
+
+# CLI args + logging
+clap = { version = "4", features = ["derive"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+dirs-next = { workspace = true }
+
+# Metadata pour `cargo deb` — génère le .deb headless avec systemd unit,
+# postinst (setcap + adduser + systemctl enable) et prerm (stop service).
+[package.metadata.deb]
+name = "lanprobe-server"
+maintainer = "LanProbe <noreply@lanprobe.io>"
+copyright = "2026, LanProbe"
+extended-description = """
+LanProbe headless — expose the LanProbe network-management UI over HTTPS
+so any browser on the LAN can drive the network tools of this host.
+Ideal for a Raspberry Pi or a Debian server sitting on a VLAN to audit.
+"""
+depends = "$auto, adduser, libcap2-bin"
+section = "net"
+priority = "optional"
+assets = [
+    ["target/release/lanprobe-server", "usr/bin/", "755"],
+    ["packaging/systemd/lanprobe-server.service", "lib/systemd/system/", "644"],
+    ["../../src-tauri/resources/linux/speedtest", "usr/lib/lanprobe/speedtest", "755"],
+]
+maintainer-scripts = "packaging/debian"

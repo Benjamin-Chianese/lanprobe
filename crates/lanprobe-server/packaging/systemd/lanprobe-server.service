@@ -1,0 +1,34 @@
+[Unit]
+Description=LanProbe headless server (HTTPS UI for network tools)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/lanprobe-server --host 0.0.0.0 --port 8443 --config-dir /var/lib/lanprobe
+Restart=on-failure
+RestartSec=5
+
+# Utilisateur dédié — créé par postinst. Les capabilities CAP_NET_RAW et
+# CAP_NET_ADMIN sont appliquées au binaire via `setcap` dans le postinst
+# pour permettre les ping ICMP raw et les changements d'IP sans être root.
+User=lanprobe
+Group=lanprobe
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+
+StateDirectory=lanprobe
+StateDirectoryMode=0750
+ReadWritePaths=/var/lib/lanprobe
+
+# Hardening raisonnable — on garde l'accès réseau mais on lock le reste.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+
+[Install]
+WantedBy=multi-user.target

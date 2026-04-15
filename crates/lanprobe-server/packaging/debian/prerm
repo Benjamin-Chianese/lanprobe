@@ -1,0 +1,9 @@
+#!/bin/sh
+set -e
+
+if [ -d /run/systemd/system ]; then
+    systemctl stop lanprobe-server.service || true
+    systemctl disable lanprobe-server.service || true
+fi
+
+exit 0
