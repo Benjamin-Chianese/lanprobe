@@ -288,7 +288,6 @@ git tag v1.0.0 && git push origin v1.0.0
 - [x] i18n — Anglais, Français, Espagnol
 - [x] `.pkg` macOS signé + notarisé avec provisionnement sudoers
 - [x] 6 palettes de couleurs (mode sombre + clair)
-- [ ] Build Linux ARM64 (Raspberry Pi)
 
 ---
 
