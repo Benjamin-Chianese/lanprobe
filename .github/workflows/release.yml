@@ -16,6 +16,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i.bak "s/^version = \"0\.0\.0\"/version = \"${VERSION}\"/" Cargo.toml && rm Cargo.toml.bak
+          sed -i.bak "s/\"version\": \"0\.0\.0\"/\"version\": \"${VERSION}\"/" src-tauri/tauri.conf.json && rm src-tauri/tauri.conf.json.bak
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
@@ -89,6 +96,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i.bak "s/^version = \"0\.0\.0\"/version = \"${VERSION}\"/" Cargo.toml && rm Cargo.toml.bak
+          sed -i.bak "s/\"version\": \"0\.0\.0\"/\"version\": \"${VERSION}\"/" src-tauri/tauri.conf.json && rm src-tauri/tauri.conf.json.bak
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
@@ -150,6 +164,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v6
 
+      - name: Set version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i.bak "s/^version = \"0\.0\.0\"/version = \"${VERSION}\"/" Cargo.toml && rm Cargo.toml.bak
+          sed -i.bak "s/\"version\": \"0\.0\.0\"/\"version\": \"${VERSION}\"/" src-tauri/tauri.conf.json && rm src-tauri/tauri.conf.json.bak
+
       - name: Setup Node
         uses: actions/setup-node@v6
         with:
@@ -201,6 +222,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
+
+      - name: Set version from tag
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i.bak "s/^version = \"0\.0\.0\"/version = \"${VERSION}\"/" Cargo.toml && rm Cargo.toml.bak
+          sed -i.bak "s/\"version\": \"0\.0\.0\"/\"version\": \"${VERSION}\"/" src-tauri/tauri.conf.json && rm src-tauri/tauri.conf.json.bak
 
       - name: Setup Node
         uses: actions/setup-node@v6
