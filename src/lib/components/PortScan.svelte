@@ -13,8 +13,9 @@
 
   onMount(() => { portscanProfiles.init(); });
 
-  const activeId = $derived($portscanProfiles.active);
-  const activeProfile = $derived($portscanProfiles.find(p => p.id === $activeId) ?? $portscanProfiles[0]);
+  let activeId = $state('builtin:common');
+  portscanProfiles.active.subscribe(v => { activeId = v; });
+  const activeProfile = $derived($portscanProfiles.find(p => p.id === activeId) ?? $portscanProfiles[0]);
 
   function parsePorts(text: string): number[] {
     const out = new Set<number>();
@@ -93,7 +94,7 @@
   function removeProfile(p: PortScanProfile) {
     if (p.builtin) return;
     portscanProfiles.remove(p.id);
-    if ($activeId === p.id) portscanProfiles.setActive('builtin:common');
+    if (activeId === p.id) portscanProfiles.setActive('builtin:common');
   }
 
   function openCount(e: ScanEntry): number {
