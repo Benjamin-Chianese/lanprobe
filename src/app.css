@@ -145,12 +145,19 @@
   --ep-accent-glow:         rgba(8,145,178,0.25);
   --ep-accent-grad:         linear-gradient(135deg, #0891b2, #0e7490);
   --ep-bg-primary:          #f0f8fa;
+  --ep-bg-secondary:        #ffffff;
   --ep-bg-tertiary:         #e8f5f8;
   --ep-bg-hover:            rgba(8,145,178,0.05);
+  --ep-glass-bg:            rgba(255,255,255,0.7);
+  --ep-glass-bg-md:         rgba(255,255,255,0.85);
   --ep-glass-border:        rgba(8,145,178,0.12);
   --ep-glass-border-strong: rgba(8,145,178,0.22);
   --ep-border:              rgba(8,145,178,0.12);
   --ep-border-strong:       rgba(8,145,178,0.22);
+  --ep-text-primary:        #0f1220;
+  --ep-text-secondary:      #4a5568;
+  --ep-text-muted:          #718096;
+  --ep-text-dim:            #a0aec0;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark'])[data-palette='cyan'] {
@@ -160,12 +167,19 @@
     --ep-accent-glow:         rgba(8,145,178,0.25);
     --ep-accent-grad:         linear-gradient(135deg, #0891b2, #0e7490);
     --ep-bg-primary:          #f0f8fa;
+    --ep-bg-secondary:        #ffffff;
     --ep-bg-tertiary:         #e8f5f8;
     --ep-bg-hover:            rgba(8,145,178,0.05);
+    --ep-glass-bg:            rgba(255,255,255,0.7);
+    --ep-glass-bg-md:         rgba(255,255,255,0.85);
     --ep-glass-border:        rgba(8,145,178,0.12);
     --ep-glass-border-strong: rgba(8,145,178,0.22);
     --ep-border:              rgba(8,145,178,0.12);
     --ep-border-strong:       rgba(8,145,178,0.22);
+    --ep-text-primary:        #0f1220;
+    --ep-text-secondary:      #4a5568;
+    --ep-text-muted:          #718096;
+    --ep-text-dim:            #a0aec0;
   }
 }
 
@@ -189,12 +203,19 @@
   --ep-accent-glow:         rgba(5,150,105,0.25);
   --ep-accent-grad:         linear-gradient(135deg, #059669, #047857);
   --ep-bg-primary:          #f0faf5;
+  --ep-bg-secondary:        #ffffff;
   --ep-bg-tertiary:         #e6f7ee;
   --ep-bg-hover:            rgba(5,150,105,0.05);
+  --ep-glass-bg:            rgba(255,255,255,0.7);
+  --ep-glass-bg-md:         rgba(255,255,255,0.85);
   --ep-glass-border:        rgba(5,150,105,0.12);
   --ep-glass-border-strong: rgba(5,150,105,0.22);
   --ep-border:              rgba(5,150,105,0.12);
   --ep-border-strong:       rgba(5,150,105,0.22);
+  --ep-text-primary:        #0f1220;
+  --ep-text-secondary:      #4a5568;
+  --ep-text-muted:          #718096;
+  --ep-text-dim:            #a0aec0;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark'])[data-palette='emerald'] {
@@ -204,12 +225,19 @@
     --ep-accent-glow:         rgba(5,150,105,0.25);
     --ep-accent-grad:         linear-gradient(135deg, #059669, #047857);
     --ep-bg-primary:          #f0faf5;
+    --ep-bg-secondary:        #ffffff;
     --ep-bg-tertiary:         #e6f7ee;
     --ep-bg-hover:            rgba(5,150,105,0.05);
+    --ep-glass-bg:            rgba(255,255,255,0.7);
+    --ep-glass-bg-md:         rgba(255,255,255,0.85);
     --ep-glass-border:        rgba(5,150,105,0.12);
     --ep-glass-border-strong: rgba(5,150,105,0.22);
     --ep-border:              rgba(5,150,105,0.12);
     --ep-border-strong:       rgba(5,150,105,0.22);
+    --ep-text-primary:        #0f1220;
+    --ep-text-secondary:      #4a5568;
+    --ep-text-muted:          #718096;
+    --ep-text-dim:            #a0aec0;
   }
 }
 
@@ -233,12 +261,19 @@
   --ep-accent-glow:         rgba(225,29,72,0.25);
   --ep-accent-grad:         linear-gradient(135deg, #e11d48, #be123c);
   --ep-bg-primary:          #fdf2f4;
+  --ep-bg-secondary:        #ffffff;
   --ep-bg-tertiary:         #fce8ec;
   --ep-bg-hover:            rgba(225,29,72,0.05);
+  --ep-glass-bg:            rgba(255,255,255,0.7);
+  --ep-glass-bg-md:         rgba(255,255,255,0.85);
   --ep-glass-border:        rgba(225,29,72,0.12);
   --ep-glass-border-strong: rgba(225,29,72,0.22);
   --ep-border:              rgba(225,29,72,0.12);
   --ep-border-strong:       rgba(225,29,72,0.22);
+  --ep-text-primary:        #0f1220;
+  --ep-text-secondary:      #4a5568;
+  --ep-text-muted:          #718096;
+  --ep-text-dim:            #a0aec0;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark'])[data-palette='rose'] {
@@ -248,12 +283,19 @@
     --ep-accent-glow:         rgba(225,29,72,0.25);
     --ep-accent-grad:         linear-gradient(135deg, #e11d48, #be123c);
     --ep-bg-primary:          #fdf2f4;
+    --ep-bg-secondary:        #ffffff;
     --ep-bg-tertiary:         #fce8ec;
     --ep-bg-hover:            rgba(225,29,72,0.05);
+    --ep-glass-bg:            rgba(255,255,255,0.7);
+    --ep-glass-bg-md:         rgba(255,255,255,0.85);
     --ep-glass-border:        rgba(225,29,72,0.12);
     --ep-glass-border-strong: rgba(225,29,72,0.22);
     --ep-border:              rgba(225,29,72,0.12);
     --ep-border-strong:       rgba(225,29,72,0.22);
+    --ep-text-primary:        #0f1220;
+    --ep-text-secondary:      #4a5568;
+    --ep-text-muted:          #718096;
+    --ep-text-dim:            #a0aec0;
   }
 }
 
@@ -277,12 +319,19 @@
   --ep-accent-glow:         rgba(217,119,6,0.25);
   --ep-accent-grad:         linear-gradient(135deg, #d97706, #b45309);
   --ep-bg-primary:          #fdf8ee;
+  --ep-bg-secondary:        #ffffff;
   --ep-bg-tertiary:         #fdf0d0;
   --ep-bg-hover:            rgba(217,119,6,0.05);
+  --ep-glass-bg:            rgba(255,255,255,0.7);
+  --ep-glass-bg-md:         rgba(255,255,255,0.85);
   --ep-glass-border:        rgba(217,119,6,0.12);
   --ep-glass-border-strong: rgba(217,119,6,0.22);
   --ep-border:              rgba(217,119,6,0.12);
   --ep-border-strong:       rgba(217,119,6,0.22);
+  --ep-text-primary:        #0f1220;
+  --ep-text-secondary:      #4a5568;
+  --ep-text-muted:          #718096;
+  --ep-text-dim:            #a0aec0;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark'])[data-palette='amber'] {
@@ -292,12 +341,19 @@
     --ep-accent-glow:         rgba(217,119,6,0.25);
     --ep-accent-grad:         linear-gradient(135deg, #d97706, #b45309);
     --ep-bg-primary:          #fdf8ee;
+    --ep-bg-secondary:        #ffffff;
     --ep-bg-tertiary:         #fdf0d0;
     --ep-bg-hover:            rgba(217,119,6,0.05);
+    --ep-glass-bg:            rgba(255,255,255,0.7);
+    --ep-glass-bg-md:         rgba(255,255,255,0.85);
     --ep-glass-border:        rgba(217,119,6,0.12);
     --ep-glass-border-strong: rgba(217,119,6,0.22);
     --ep-border:              rgba(217,119,6,0.12);
     --ep-border-strong:       rgba(217,119,6,0.22);
+    --ep-text-primary:        #0f1220;
+    --ep-text-secondary:      #4a5568;
+    --ep-text-muted:          #718096;
+    --ep-text-dim:            #a0aec0;
   }
 }
 
@@ -321,12 +377,19 @@
   --ep-accent-glow:         rgba(71,85,105,0.25);
   --ep-accent-grad:         linear-gradient(135deg, #475569, #334155);
   --ep-bg-primary:          #f4f6f8;
+  --ep-bg-secondary:        #ffffff;
   --ep-bg-tertiary:         #edf0f4;
   --ep-bg-hover:            rgba(71,85,105,0.05);
+  --ep-glass-bg:            rgba(255,255,255,0.7);
+  --ep-glass-bg-md:         rgba(255,255,255,0.85);
   --ep-glass-border:        rgba(71,85,105,0.12);
   --ep-glass-border-strong: rgba(71,85,105,0.22);
   --ep-border:              rgba(71,85,105,0.12);
   --ep-border-strong:       rgba(71,85,105,0.22);
+  --ep-text-primary:        #0f1220;
+  --ep-text-secondary:      #4a5568;
+  --ep-text-muted:          #718096;
+  --ep-text-dim:            #a0aec0;
 }
 @media (prefers-color-scheme: light) {
   :root:not([data-theme='dark'])[data-palette='slate'] {
@@ -336,12 +399,19 @@
     --ep-accent-glow:         rgba(71,85,105,0.25);
     --ep-accent-grad:         linear-gradient(135deg, #475569, #334155);
     --ep-bg-primary:          #f4f6f8;
+    --ep-bg-secondary:        #ffffff;
     --ep-bg-tertiary:         #edf0f4;
     --ep-bg-hover:            rgba(71,85,105,0.05);
+    --ep-glass-bg:            rgba(255,255,255,0.7);
+    --ep-glass-bg-md:         rgba(255,255,255,0.85);
     --ep-glass-border:        rgba(71,85,105,0.12);
     --ep-glass-border-strong: rgba(71,85,105,0.22);
     --ep-border:              rgba(71,85,105,0.12);
     --ep-border-strong:       rgba(71,85,105,0.22);
+    --ep-text-primary:        #0f1220;
+    --ep-text-secondary:      #4a5568;
+    --ep-text-muted:          #718096;
+    --ep-text-dim:            #a0aec0;
   }
 }
 
