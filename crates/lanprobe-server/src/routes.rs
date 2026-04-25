@@ -208,11 +208,13 @@ async fn dispatch(cmd: &str, args: Value, state: &AppState) -> Result<Value, Str
             let cancel = state.scan_cancel.clone();
             let events = state.events.clone();
             let discovery = state.discovery.clone();
+            let cidr_for_spawn = cidr.clone();
 
             tokio::spawn(async move {
+                let cidr = cidr_for_spawn;
                 let arp_initial = read_arp_table().await;
                 if cancel.load(Ordering::SeqCst) {
-                    let _ = events.send(done_event());
+                    let _ = events.send(done_event(&cidr, 0));
                     return;
                 }
                 for (ip, mac) in &arp_initial {
@@ -274,7 +276,7 @@ async fn dispatch(cmd: &str, args: Value, state: &AppState) -> Result<Value, Str
                     for h in handles { let _ = h.await; }
                 }
                 if cancel.load(Ordering::SeqCst) {
-                    let _ = events.send(done_event());
+                    let _ = events.send(done_event(&cidr, 0));
                     return;
                 }
                 let arp_after = read_arp_table().await;
@@ -290,13 +292,14 @@ async fn dispatch(cmd: &str, args: Value, state: &AppState) -> Result<Value, Str
                         }
                     }
                 }
-                let _ = events.send(done_event());
+                let hosts_found = discovery.snapshot().len();
+                let _ = events.send(done_event(&cidr, hosts_found));
             });
             Ok(Value::Null)
         }
         "cmd_cancel_scan" => {
             state.scan_cancel.store(true, Ordering::SeqCst);
-            let _ = state.events.send(done_event());
+            let _ = state.events.send(done_event("", 0));
             Ok(Value::Null)
         }
 
@@ -496,10 +499,23 @@ fn cidr_from_ip_mask(ip: &str, mask: &str) -> Option<String> {
     Some(format!("{}/{}", net, prefix))
 }
 
-fn done_event() -> crate::state::BroadcastEvent {
+fn done_event(cidr: &str, hosts_found: usize) -> crate::state::BroadcastEvent {
     crate::state::BroadcastEvent {
         event: "discovery:done".into(),
-        payload: Value::Null,
+        payload: serde_json::json!({ "cidr": cidr, "hosts_found": hosts_found }),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_done_event_payload() {
+        let event = done_event("192.168.1.0/24", 42);
+        assert_eq!(event.event, "discovery:done");
+        assert_eq!(event.payload["cidr"], "192.168.1.0/24");
+        assert_eq!(event.payload["hosts_found"], 42);
     }
 }
 
