@@ -8,6 +8,8 @@
   import { get } from 'svelte/store';
   import { loadServerMode, saveServerMode } from '../stores/serverMode';
   import { selectedInterface } from '../stores/selectedInterface';
+  import { influxDb, type InfluxDbConfig } from '../stores/influxdb';
+  import { scheduler, type SchedulerConfig } from '../stores/scheduler';
 
   const langs: { value: Lang; labelKey: string }[] = [
     { value: 'en', labelKey: 'settings.language.english' },
@@ -37,6 +39,59 @@
   let serverHost = $state('0.0.0.0');
   let serverError = $state('');
   let serverBusy = $state(false);
+
+  // InfluxDB config
+  let influxCfg = $state<InfluxDbConfig>({ ...$influxDb, v1: { ...$influxDb.v1 }, v2: { ...$influxDb.v2 } });
+  let influxTestStatus = $state<'idle' | 'testing' | 'ok' | 'fail'>('idle');
+  let influxTestError = $state('');
+
+  $effect(() => {
+    influxCfg = { ...$influxDb, v1: { ...$influxDb.v1 }, v2: { ...$influxDb.v2 } };
+  });
+
+  // Scheduler config
+  let schedCfg = $state<SchedulerConfig>({ ...$scheduler, portscan_targets: [...($scheduler.portscan_targets ?? [])] });
+  let newPortscanTarget = $state('');
+
+  $effect(() => {
+    schedCfg = { ...$scheduler, portscan_targets: [...($scheduler.portscan_targets ?? [])] };
+  });
+
+  async function saveInflux() {
+    await influxDb.save(influxCfg);
+  }
+
+  async function testInflux() {
+    influxTestStatus = 'testing';
+    influxTestError = '';
+    try {
+      const res = await invoke<{ ok: boolean; error?: string }>('cmd_test_influxdb', {});
+      if (res.ok) {
+        influxTestStatus = 'ok';
+      } else {
+        influxTestStatus = 'fail';
+        influxTestError = res.error ?? '';
+      }
+    } catch (e) {
+      influxTestStatus = 'fail';
+      influxTestError = String(e);
+    }
+  }
+
+  async function saveSched() {
+    await scheduler.save(schedCfg);
+  }
+
+  function addPortscanTarget() {
+    const t = newPortscanTarget.trim();
+    if (!t || schedCfg.portscan_targets.includes(t)) return;
+    schedCfg = { ...schedCfg, portscan_targets: [...schedCfg.portscan_targets, t] };
+    newPortscanTarget = '';
+  }
+
+  function removePortscanTarget(target: string) {
+    schedCfg = { ...schedCfg, portscan_targets: schedCfg.portscan_targets.filter(x => x !== target) };
+  }
 
   // Compte serveur (username/password)
   let accountUsername = $state('');
@@ -116,6 +171,8 @@
       try { serverPlatform = await invoke<'windows' | 'macos' | 'linux'>('cmd_get_platform'); } catch {}
     }
     await portscanProfiles.init();
+    await influxDb.init();
+    await scheduler.init();
     // Restaure la dernière config mode serveur pour que l'UI reflète
     // ce qui a été auto-lancé au boot de l'app.
     try {
@@ -475,6 +532,118 @@
   </section>
   </div>
   {/if}
+
+  <!-- InfluxDB Export -->
+  <div class="group">
+    <section class="section">
+      <div class="section-head">{$_('settings.influxdb.title')}</div>
+      <div class="row-control">
+        <span class="row-label">{$_('settings.influxdb.enabled')}</span>
+        <input type="checkbox" bind:checked={influxCfg.enabled} onchange={saveInflux} />
+      </div>
+      <div class="row-control" style="margin-top: 6px;">
+        <span class="row-label">{$_('settings.influxdb.version')}</span>
+        <select bind:value={influxCfg.version} onchange={saveInflux}>
+          <option value="v2">InfluxDB v2</option>
+          <option value="v1">InfluxDB v1</option>
+        </select>
+      </div>
+      <div class="row-control" style="margin-top: 6px;">
+        <span class="row-label">{$_('settings.influxdb.url')}</span>
+        <input type="text" bind:value={influxCfg.url} placeholder={$_('settings.influxdb.url_placeholder')} onblur={saveInflux} />
+      </div>
+      <div class="row-control" style="margin-top: 6px;">
+        <span class="row-label">{$_('settings.influxdb.instance_label')}</span>
+        <input type="text" bind:value={influxCfg.instance_label} placeholder={$_('settings.influxdb.instance_label_placeholder')} onblur={saveInflux} />
+      </div>
+      {#if influxCfg.version === 'v1'}
+        <div class="row-control" style="margin-top: 6px;">
+          <span class="row-label">{$_('settings.influxdb.v1_database')}</span>
+          <input type="text" bind:value={influxCfg.v1.database} onblur={saveInflux} />
+        </div>
+        <div class="row-control" style="margin-top: 6px;">
+          <span class="row-label">{$_('settings.influxdb.v1_username')}</span>
+          <input type="text" bind:value={influxCfg.v1.username} onblur={saveInflux} />
+        </div>
+        <div class="row-control" style="margin-top: 6px;">
+          <span class="row-label">{$_('settings.influxdb.v1_password')}</span>
+          <input type="password" bind:value={influxCfg.v1.password} onblur={saveInflux} />
+        </div>
+      {:else}
+        <div class="row-control" style="margin-top: 6px;">
+          <span class="row-label">{$_('settings.influxdb.v2_org')}</span>
+          <input type="text" bind:value={influxCfg.v2.org} onblur={saveInflux} />
+        </div>
+        <div class="row-control" style="margin-top: 6px;">
+          <span class="row-label">{$_('settings.influxdb.v2_bucket')}</span>
+          <input type="text" bind:value={influxCfg.v2.bucket} onblur={saveInflux} />
+        </div>
+        <div class="row-control" style="margin-top: 6px;">
+          <span class="row-label">{$_('settings.influxdb.v2_token')}</span>
+          <input type="password" bind:value={influxCfg.v2.token} onblur={saveInflux} />
+        </div>
+      {/if}
+      <div style="margin-top: 10px; display: flex; align-items: center; gap: 10px;">
+        <button class="action-btn" onclick={testInflux} disabled={influxTestStatus === 'testing' || !influxCfg.enabled}>
+          {$_('settings.influxdb.test_btn')}
+        </button>
+        {#if influxTestStatus === 'ok'}
+          <span style="color: var(--ep-success, #22c55e);">{$_('settings.influxdb.test_ok')}</span>
+        {:else if influxTestStatus === 'fail'}
+          <span style="color: var(--ep-danger, #ef4444);">{$_('settings.influxdb.test_fail')}{#if influxTestError}: {influxTestError}{/if}</span>
+        {/if}
+      </div>
+      <p class="hint">{$_('settings.influxdb.hint')}</p>
+    </section>
+  </div>
+
+  <!-- Scheduler -->
+  <div class="group">
+    <section class="section">
+      <div class="section-head">{$_('settings.scheduler.title')}</div>
+
+      <div class="row-control">
+        <span class="row-label">{$_('settings.scheduler.speedtest_label')}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" min="0" style="width:80px;" bind:value={schedCfg.speedtest_interval_min} onblur={saveSched} />
+          <span class="row-label">{$_('settings.scheduler.interval_unit')}</span>
+        </div>
+      </div>
+      <div class="row-control" style="margin-top: 6px;">
+        <span class="row-label">{$_('settings.scheduler.discovery_label')}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" min="0" style="width:80px;" bind:value={schedCfg.discovery_interval_min} onblur={saveSched} />
+          <span class="row-label">{$_('settings.scheduler.interval_unit')}</span>
+        </div>
+      </div>
+      <div class="row-control" style="margin-top: 6px;">
+        <span class="row-label">{$_('settings.scheduler.cidr_label')}</span>
+        <input type="text" bind:value={schedCfg.discovery_cidr} placeholder={$_('settings.scheduler.cidr_placeholder')} onblur={saveSched} />
+      </div>
+      <div class="row-control" style="margin-top: 6px;">
+        <span class="row-label">{$_('settings.scheduler.portscan_label')}</span>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="number" min="0" style="width:80px;" bind:value={schedCfg.portscan_interval_min} onblur={saveSched} />
+          <span class="row-label">{$_('settings.scheduler.interval_unit')}</span>
+        </div>
+      </div>
+      <div style="margin-top: 8px;">
+        <div class="row-label" style="margin-bottom:4px;">{$_('settings.scheduler.targets_label')}</div>
+        {#each schedCfg.portscan_targets as target}
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
+            <span class="mono" style="flex:1;">{target}</span>
+            <button class="action-btn" onclick={() => { removePortscanTarget(target); saveSched(); }}>✕</button>
+          </div>
+        {/each}
+        <div style="display:flex;gap:6px;margin-top:4px;">
+          <input type="text" bind:value={newPortscanTarget} placeholder={$_('settings.scheduler.targets_placeholder')}
+            style="flex:1;" onkeydown={(e) => { if (e.key === 'Enter') { addPortscanTarget(); saveSched(); } }} />
+          <button class="action-btn" onclick={() => { addPortscanTarget(); saveSched(); }}>{$_('settings.scheduler.add_target')}</button>
+        </div>
+      </div>
+      <p class="hint">{$_('settings.scheduler.hint')}</p>
+    </section>
+  </div>
 
   <!-- À propos -->
   <div class="group">

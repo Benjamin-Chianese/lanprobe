@@ -358,6 +358,39 @@
       "english": "English",
       "french": "French",
       "spanish": "Spanish"
+    },
+    "influxdb": {
+      "title": "InfluxDB Export",
+      "enabled": "Enable InfluxDB export",
+      "version": "Version",
+      "url": "URL",
+      "url_placeholder": "http://influxdb:8086",
+      "instance_label": "Instance label",
+      "instance_label_placeholder": "Leave empty to use hostname",
+      "v1_database": "Database",
+      "v1_username": "Username",
+      "v1_password": "Password",
+      "v2_org": "Organization",
+      "v2_bucket": "Bucket",
+      "v2_token": "Token",
+      "test_btn": "Test connection",
+      "test_ok": "Connected",
+      "test_fail": "Connection failed",
+      "hint": "Push metrics to InfluxDB in real time. Supported: InfluxDB v1 and v2."
+    },
+    "scheduler": {
+      "title": "Scheduler",
+      "speedtest_label": "Speed test interval",
+      "discovery_label": "Discovery interval",
+      "portscan_label": "Port scan interval",
+      "cidr_label": "Discovery CIDR",
+      "cidr_placeholder": "Auto-detect",
+      "targets_label": "Port scan targets",
+      "targets_placeholder": "192.168.1.1",
+      "add_target": "Add",
+      "interval_disabled": "Disabled (0 = off)",
+      "interval_unit": "min",
+      "hint": "Automatically run probes at regular intervals. Results are exported to InfluxDB if enabled."
     }
   }
 }
