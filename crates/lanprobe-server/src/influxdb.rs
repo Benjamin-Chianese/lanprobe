@@ -73,25 +73,26 @@ impl InfluxConfig {
 
 struct InfluxClient {
     http: reqwest::Client,
-    write_url: String,
+    base_url: String,
+    query_params: Vec<(String, String)>,
     auth_header: Option<String>,
     host_tag: String,
 }
 
 impl InfluxClient {
-    fn new(cfg: &InfluxConfig) -> Self {
-        let host_tag = resolve_host_tag(cfg);
+    async fn new(cfg: &InfluxConfig) -> Self {
+        let host_tag = resolve_host_tag_async(cfg).await;
 
-        let (write_url, auth_header) = if cfg.version == "v1" {
+        let (base_url, query_params, auth_header) = if cfg.version == "v1" {
             // Credentials en query params (InfluxDB v1 les supporte nativement).
             // On préfère ça à Basic Auth pour éviter une dépendance optionnelle
             // tout en restant correct — mais la crate base64 étant disponible,
             // on utilise quand même Basic Auth pour plus de sécurité sur HTTPS.
-            let url = format!(
-                "{}/write?db={}&precision=ns",
-                cfg.url.trim_end_matches('/'),
-                cfg.v1.database
-            );
+            let url = format!("{}/write", cfg.url.trim_end_matches('/'));
+            let params = vec![
+                ("db".to_string(), cfg.v1.database.clone()),
+                ("precision".to_string(), "ns".to_string()),
+            ];
             let auth = if !cfg.v1.username.is_empty() {
                 let encoded =
                     B64_STANDARD.encode(format!("{}:{}", cfg.v1.username, cfg.v1.password));
@@ -99,25 +100,26 @@ impl InfluxClient {
             } else {
                 None
             };
-            (url, auth)
+            (url, params, auth)
         } else {
-            let url = format!(
-                "{}/api/v2/write?org={}&bucket={}&precision=ns",
-                cfg.url.trim_end_matches('/'),
-                cfg.v2.org,
-                cfg.v2.bucket
-            );
+            let url = format!("{}/api/v2/write", cfg.url.trim_end_matches('/'));
+            let params = vec![
+                ("org".to_string(), cfg.v2.org.clone()),
+                ("bucket".to_string(), cfg.v2.bucket.clone()),
+                ("precision".to_string(), "ns".to_string()),
+            ];
             let auth = if !cfg.v2.token.is_empty() {
                 Some(format!("Token {}", cfg.v2.token))
             } else {
                 None
             };
-            (url, auth)
+            (url, params, auth)
         };
 
         Self {
             http: reqwest::Client::new(),
-            write_url,
+            base_url,
+            query_params,
             auth_header,
             host_tag,
         }
@@ -125,7 +127,8 @@ impl InfluxClient {
 
     async fn write(&self, body: String) -> Result<(), String> {
         let mut req = self.http
-            .post(&self.write_url)
+            .post(&self.base_url)
+            .query(&self.query_params)
             .timeout(std::time::Duration::from_secs(10))
             .body(body);
         if let Some(auth) = &self.auth_header {
@@ -133,7 +136,7 @@ impl InfluxClient {
         }
         let resp = req.send().await.map_err(|e| e.to_string())?;
         let status = resp.status();
-        if status.is_success() || status.as_u16() == 204 {
+        if status.is_success() {
             Ok(())
         } else {
             Err(format!("InfluxDB write error: {}", status))
@@ -143,18 +146,22 @@ impl InfluxClient {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-fn resolve_host_tag(cfg: &InfluxConfig) -> String {
+async fn resolve_host_tag_async(cfg: &InfluxConfig) -> String {
     if !cfg.instance_label.is_empty() {
         return cfg.instance_label.clone();
     }
-    std::env::var("HOSTNAME").unwrap_or_else(|_| {
-        std::process::Command::new("hostname")
-            .output()
-            .ok()
-            .and_then(|o| String::from_utf8(o.stdout).ok())
-            .map(|s| s.trim().to_string())
-            .unwrap_or_else(|| "unknown".to_string())
-    })
+    if let Ok(h) = std::env::var("HOSTNAME") {
+        if !h.is_empty() {
+            return h;
+        }
+    }
+    tokio::process::Command::new("hostname")
+        .output()
+        .await
+        .ok()
+        .and_then(|o| String::from_utf8(o.stdout).ok())
+        .map(|s| s.trim().to_string())
+        .unwrap_or_else(|| "unknown".to_string())
 }
 
 /// Escapes spaces, commas and equals signs as required by InfluxDB Line Protocol.
@@ -179,19 +186,21 @@ fn event_to_points(event: &BroadcastEvent, host: &str) -> Vec<String> {
     match event.event.as_str() {
         "ping:tick" => {
             let ip = p["ip"].as_str().unwrap_or("unknown");
-            // latency_ms peut être null quand l'hôte est unreachable.
-            let latency = p["latency_ms"].as_u64().unwrap_or(0);
-            let alive = if p["alive"].as_bool().unwrap_or(false) {
-                "true"
+            let alive = p["alive"].as_bool().unwrap_or(false);
+            let alive_str = if alive { "true" } else { "false" };
+            // latency_ms n'est inclus que quand l'hôte est joignable — écrire
+            // 0 pour un hôte unreachable serait trompeur.
+            let latency_part = if alive {
+                format!("latency_ms={}i,", p["latency_ms"].as_u64().unwrap_or(0))
             } else {
-                "false"
+                String::new()
             };
             vec![format!(
-                "ping_latency,host={},ip={} latency_ms={}i,alive={} {}",
+                "ping_latency,host={},ip={} {}alive={} {}",
                 host_tag,
                 escape_tag(ip),
-                latency,
-                alive,
+                latency_part,
+                alive_str,
                 ts
             )]
         }
@@ -325,7 +334,7 @@ pub async fn test_connection(state: AppState) -> Result<(), String> {
     } else {
         format!("{}/api/v2/ping", cfg.url.trim_end_matches('/'))
     };
-    let client = InfluxClient::new(&cfg);
+    let client = InfluxClient::new(&cfg).await;
     let mut req = client.http.get(&ping_url);
     if let Some(auth) = &client.auth_header {
         req = req.header("Authorization", auth);
@@ -336,7 +345,7 @@ pub async fn test_connection(state: AppState) -> Result<(), String> {
         .await
         .map_err(|e| e.to_string())?;
     let status = resp.status();
-    if status.as_u16() == 204 || status.is_success() {
+    if status.is_success() {
         Ok(())
     } else {
         Err(format!("Unexpected status: {}", status))
@@ -366,13 +375,16 @@ pub async fn run(state: AppState) {
             Ok(event) if event.event == "config:update" => {
                 cfg = load_config(&state);
             }
-            Err(_) => return, // canal fermé → shutdown
+            Err(tokio::sync::broadcast::error::RecvError::Closed) => return,
+            Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                tracing::warn!("InfluxDB: broadcast lagged, {} events dropped", n);
+            }
             _ => {}
         }
     }
 
     // 4. Construire le client.
-    let mut client = InfluxClient::new(&cfg);
+    let mut client = InfluxClient::new(&cfg).await;
 
     // 5. Ticker de flush à 1 s.
     let mut ticker = tokio::time::interval(std::time::Duration::from_secs(1));
@@ -388,7 +400,7 @@ pub async fn run(state: AppState) {
                         if event.event == "config:update" {
                             let new_cfg = load_config(&state);
                             if new_cfg.is_ready() {
-                                client = InfluxClient::new(&new_cfg);
+                                client = InfluxClient::new(&new_cfg).await;
                                 cfg = new_cfg;
                             } else {
                                 // InfluxDB désactivé ou config incomplète →
@@ -400,18 +412,30 @@ pub async fn run(state: AppState) {
                                         Ok(e) if e.event == "config:update" => {
                                             cfg = load_config(&state);
                                         }
-                                        Err(_) => return,
+                                        Err(tokio::sync::broadcast::error::RecvError::Closed) => return,
+                                        Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                                            tracing::warn!("InfluxDB: broadcast lagged, {} events dropped", n);
+                                        }
                                         _ => {}
                                     }
                                 }
-                                client = InfluxClient::new(&cfg);
+                                client = InfluxClient::new(&cfg).await;
                             }
                         } else {
                             let points = event_to_points(&event, &client.host_tag);
                             buffer.extend(points);
+                            const MAX_BUFFER: usize = 10_000;
+                            if buffer.len() > MAX_BUFFER {
+                                let drop_count = buffer.len() - MAX_BUFFER;
+                                buffer.drain(0..drop_count);
+                                tracing::warn!("InfluxDB: buffer overflow, dropped {} oldest points", drop_count);
+                            }
                         }
                     }
-                    Err(_) => return, // canal fermé → shutdown
+                    Err(tokio::sync::broadcast::error::RecvError::Closed) => return,
+                    Err(tokio::sync::broadcast::error::RecvError::Lagged(n)) => {
+                        tracing::warn!("InfluxDB: broadcast lagged, {} events dropped", n);
+                    }
                 }
             }
             _ = ticker.tick() => {
@@ -486,6 +510,13 @@ mod tests {
             escape_tag("hello world,foo=bar"),
             "hello\\ world\\,foo\\=bar"
         );
+    }
+
+    #[test]
+    fn test_escape_field_str() {
+        assert_eq!(escape_field_str("hello"), "hello");
+        assert_eq!(escape_field_str("say \"hi\""), "say \\\"hi\\\"");
+        assert_eq!(escape_field_str("path\\to"), "path\\\\to");
     }
 
     #[test]
