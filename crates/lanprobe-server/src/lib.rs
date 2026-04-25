@@ -6,7 +6,9 @@
 pub mod assets;
 pub mod auth;
 pub mod config;
+pub mod influxdb;
 pub mod routes;
+pub mod scheduler;
 pub mod state;
 pub mod tls;
 pub mod web;

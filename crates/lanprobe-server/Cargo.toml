@@ -52,6 +52,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 dirs-next = { workspace = true }
+reqwest = { workspace = true }
 
 # Metadata pour `cargo deb` — génère le .deb headless avec systemd unit,
 # postinst (setcap + adduser + systemctl enable) et prerm (stop service).
