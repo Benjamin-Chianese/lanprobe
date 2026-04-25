@@ -294,6 +294,9 @@ async fn dispatch(cmd: &str, args: Value, state: &AppState) -> Result<Value, Str
                 }
                 let hosts_found = discovery.snapshot().len();
                 let _ = events.send(done_event(&cidr, hosts_found));
+                // Remettre scan_cancel à true (idle) : le scan est terminé
+                // normalement, on libère le verrou pour le scheduler.
+                cancel.store(true, Ordering::SeqCst);
             });
             Ok(Value::Null)
         }

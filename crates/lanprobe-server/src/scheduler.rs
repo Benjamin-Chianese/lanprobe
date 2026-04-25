@@ -200,6 +200,23 @@ async fn run_discovery_task(state: AppState, interval_min: u64, cidr: String) {
     loop {
         ticker.tick().await;
 
+        // Guard contre la concurrence : on utilise un CAS pour s'assurer
+        // qu'aucun autre scan (déclenché manuellement ou par le scheduler)
+        // n'est en cours. `scan_cancel == true` signifie "idle" ; `false`
+        // signifie "un scan tourne". On ne procède que si on peut passer
+        // atomiquement de `true` (idle) à `false` (scan actif).
+        //
+        // Si le CAS échoue c'est qu'un scan est déjà en cours → on saute
+        // ce tick plutôt que de clobber l'état partagé.
+        if state
+            .scan_cancel
+            .compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            tracing::warn!("Scheduler: discovery scan skipped — another scan is in progress");
+            continue;
+        }
+
         // Déterminer le CIDR effectif : configuré ou auto-détecté.
         let effective_cidr = if cidr.is_empty() {
             // Même logique que cmd_get_local_network_cidr dans routes.rs :
@@ -210,6 +227,8 @@ async fn run_discovery_task(state: AppState, interval_min: u64, cidr: String) {
                 Some(c) => c,
                 None => {
                     tracing::warn!("Scheduler discovery: failed to auto-detect CIDR, skipping");
+                    // Remettre scan_cancel à true (idle) puisqu'on n'a pas démarré.
+                    state.scan_cancel.store(true, Ordering::SeqCst);
                     continue;
                 }
             }
@@ -223,132 +242,134 @@ async fn run_discovery_task(state: AppState, interval_min: u64, cidr: String) {
             Ok(r) => r,
             Err(e) => {
                 tracing::warn!("Scheduler discovery: invalid CIDR {}: {}", effective_cidr, e);
+                state.scan_cancel.store(true, Ordering::SeqCst);
                 continue;
             }
         };
 
         let src = resolve_src(&state);
 
-        // Réinitialiser l'état de découverte et stopper un éventuel scan en cours.
-        state.scan_cancel.store(false, Ordering::SeqCst);
+        // Réinitialiser le store de découverte pour ce nouveau scan.
         state.discovery.clear();
 
-        let cancel = state.scan_cancel.clone();
-        let events = state.events.clone();
-        let discovery = state.discovery.clone();
-        let cidr_for_spawn = effective_cidr.clone();
+        // — La logique de scan tourne directement ici, dans la boucle, sans
+        //   inner `tokio::spawn`. Puisque `run_discovery_task` est déjà dans
+        //   sa propre sous-tâche, un second spawn créerait une course : la
+        //   boucle pourrait avancer au tick suivant avant la fin du scan
+        //   précédent et clobberer l'état partagé.
 
-        tokio::spawn(async move {
-            let cidr = cidr_for_spawn;
-
-            // Étape 1 : ARP initial.
-            let arp_initial = read_arp_table().await;
-            if cancel.load(Ordering::SeqCst) {
-                let _ = events.send(done_event(&cidr, 0));
-                return;
-            }
-            for (ip, mac) in &arp_initial {
-                if let Some(i) = parse_ip_u32(ip) {
-                    if i >= first && i <= last {
-                        let host = DiscoveredHost {
-                            ip: ip.clone(),
-                            hostname: None,
-                            mac: Some(mac.clone()),
-                            latency_ms: None,
-                        };
-                        discovery.upsert(host.clone());
-                        let _ = events.send(crate::state::BroadcastEvent {
-                            event: "discovery:host".into(),
-                            payload: serde_json::to_value(&host)
-                                .unwrap_or(serde_json::Value::Null),
-                        });
-                    }
+        // Étape 1 : ARP initial.
+        let arp_initial = read_arp_table().await;
+        if state.scan_cancel.load(Ordering::SeqCst) {
+            let _ = state.events.send(done_event(&effective_cidr, 0));
+            state.scan_cancel.store(true, Ordering::SeqCst);
+            continue;
+        }
+        for (ip, mac) in &arp_initial {
+            if let Some(i) = parse_ip_u32(ip) {
+                if i >= first && i <= last {
+                    let host = DiscoveredHost {
+                        ip: ip.clone(),
+                        hostname: None,
+                        mac: Some(mac.clone()),
+                        latency_ms: None,
+                    };
+                    state.discovery.upsert(host.clone());
+                    let _ = state.events.send(crate::state::BroadcastEvent {
+                        event: "discovery:host".into(),
+                        payload: serde_json::to_value(&host)
+                            .unwrap_or(serde_json::Value::Null),
+                    });
                 }
             }
+        }
 
-            // Étape 2 : ping sweep en chunks parallèles.
-            #[cfg(target_os = "windows")]
-            let chunk_size = 32usize;
-            #[cfg(not(target_os = "windows"))]
-            let chunk_size = 128usize;
+        // Étape 2 : ping sweep en chunks parallèles.
+        #[cfg(target_os = "windows")]
+        let chunk_size = 32usize;
+        #[cfg(not(target_os = "windows"))]
+        let chunk_size = 128usize;
 
-            let all_ips: Vec<String> = (first..=last)
-                .map(|i| Ipv4Addr::from(i).to_string())
-                .collect();
+        let all_ips: Vec<String> = (first..=last)
+            .map(|i| Ipv4Addr::from(i).to_string())
+            .collect();
 
-            for chunk in all_ips.chunks(chunk_size) {
-                if cancel.load(Ordering::SeqCst) {
-                    break;
-                }
-                let mut handles = vec![];
-                for ip in chunk {
-                    let ip = ip.clone();
-                    let arp_mac = arp_initial.get(&ip).cloned();
-                    let events_c = events.clone();
-                    let discovery_c = discovery.clone();
-                    handles.push(tokio::spawn(async move {
-                        if let Some(lat) =
-                            lanprobe_core::ping::ping_once_fast_retry(&ip, src, 3).await
-                        {
-                            if arp_mac.is_none() {
-                                let hostname = get_hostname(&ip).await;
-                                let host = DiscoveredHost {
-                                    ip: ip.clone(),
-                                    hostname,
-                                    mac: None,
-                                    latency_ms: Some(lat),
-                                };
-                                discovery_c.upsert(host.clone());
-                                let _ = events_c.send(crate::state::BroadcastEvent {
-                                    event: "discovery:host".into(),
-                                    payload: serde_json::to_value(&host)
-                                        .unwrap_or(serde_json::Value::Null),
-                                });
-                            } else {
-                                discovery_c.update_latency(&ip, lat);
-                                let _ = events_c.send(crate::state::BroadcastEvent {
-                                    event: "discovery:host_latency".into(),
-                                    payload: json!({ "ip": ip, "latency_ms": lat }),
-                                });
-                            }
+        for chunk in all_ips.chunks(chunk_size) {
+            if state.scan_cancel.load(Ordering::SeqCst) {
+                break;
+            }
+            let mut handles = vec![];
+            for ip in chunk {
+                let ip = ip.clone();
+                let arp_mac = arp_initial.get(&ip).cloned();
+                let events_c = state.events.clone();
+                let discovery_c = state.discovery.clone();
+                handles.push(tokio::spawn(async move {
+                    if let Some(lat) =
+                        lanprobe_core::ping::ping_once_fast_retry(&ip, src, 3).await
+                    {
+                        if arp_mac.is_none() {
+                            let hostname = get_hostname(&ip).await;
+                            let host = DiscoveredHost {
+                                ip: ip.clone(),
+                                hostname,
+                                mac: None,
+                                latency_ms: Some(lat),
+                            };
+                            discovery_c.upsert(host.clone());
+                            let _ = events_c.send(crate::state::BroadcastEvent {
+                                event: "discovery:host".into(),
+                                payload: serde_json::to_value(&host)
+                                    .unwrap_or(serde_json::Value::Null),
+                            });
+                        } else {
+                            discovery_c.update_latency(&ip, lat);
+                            let _ = events_c.send(crate::state::BroadcastEvent {
+                                event: "discovery:host_latency".into(),
+                                payload: json!({ "ip": ip, "latency_ms": lat }),
+                            });
                         }
-                    }));
-                }
-                for h in handles {
-                    let _ = h.await;
-                }
-            }
-
-            if cancel.load(Ordering::SeqCst) {
-                let _ = events.send(done_event(&cidr, 0));
-                return;
-            }
-
-            // Étape 3 : ARP final pour récupérer les MACs des hôtes pingés.
-            let arp_after = read_arp_table().await;
-            for (ip, mac) in &arp_after {
-                if arp_initial.contains_key(ip) {
-                    continue;
-                }
-                if let Some(i) = parse_ip_u32(ip) {
-                    if i >= first && i <= last {
-                        discovery.update_mac(ip, mac.clone());
-                        let _ = events.send(crate::state::BroadcastEvent {
-                            event: "discovery:host_mac".into(),
-                            payload: json!({ "ip": ip, "mac": mac }),
-                        });
                     }
+                }));
+            }
+            for h in handles {
+                let _ = h.await;
+            }
+        }
+
+        if state.scan_cancel.load(Ordering::SeqCst) {
+            let _ = state.events.send(done_event(&effective_cidr, 0));
+            state.scan_cancel.store(true, Ordering::SeqCst);
+            continue;
+        }
+
+        // Étape 3 : ARP final pour récupérer les MACs des hôtes pingés.
+        let arp_after = read_arp_table().await;
+        for (ip, mac) in &arp_after {
+            if arp_initial.contains_key(ip) {
+                continue;
+            }
+            if let Some(i) = parse_ip_u32(ip) {
+                if i >= first && i <= last {
+                    state.discovery.update_mac(ip, mac.clone());
+                    let _ = state.events.send(crate::state::BroadcastEvent {
+                        event: "discovery:host_mac".into(),
+                        payload: json!({ "ip": ip, "mac": mac }),
+                    });
                 }
             }
+        }
 
-            let hosts_found = discovery.snapshot().len();
-            tracing::info!(
-                "Scheduler: discovery done on {} — {} hosts found",
-                cidr,
-                hosts_found
-            );
-            let _ = events.send(done_event(&cidr, hosts_found));
-        });
+        let hosts_found = state.discovery.snapshot().len();
+        tracing::info!(
+            "Scheduler: discovery done on {} — {} hosts found",
+            effective_cidr,
+            hosts_found
+        );
+        let _ = state.events.send(done_event(&effective_cidr, hosts_found));
+
+        // Remettre scan_cancel à true (idle) une fois le scan terminé.
+        state.scan_cancel.store(true, Ordering::SeqCst);
     }
 }
 
@@ -364,6 +385,15 @@ async fn run_portscan_task(state: AppState, interval_min: u64, targets: Vec<Stri
         tracing::info!("Scheduler: running scheduled port scan on {} targets", targets.len());
 
         for target in &targets {
+            // Valider que la cible est une adresse IPv4 valide avant de lancer
+            // le scan. Une entrée malformée dans la config ferait échouer
+            // `scan_ports` silencieusement (tous les ports retournés open=false) ;
+            // mieux vaut loguer et ignorer explicitement.
+            if target.parse::<std::net::Ipv4Addr>().is_err() {
+                tracing::warn!("Scheduler: invalid portscan target {:?}, skipping", target);
+                continue;
+            }
+
             let ip = target.clone();
             let src = resolve_src(&state);
 
@@ -396,6 +426,24 @@ async fn run_portscan_task(state: AppState, interval_min: u64, targets: Vec<Stri
 // ── Interface resolution helpers ───────────────────────────────────────────
 
 /// Retourne l'IP source de l'interface sélectionnée, ou `None`.
+///
+/// # Comportement quand `None` est retourné
+///
+/// Aucune interface n'est sélectionnée (ou l'interface sélectionnée n'a pas
+/// d'adresse IPv4). Les appelants passent cette valeur directement à
+/// `scan_ports` / `scan_udp_ports` / `run_iperf3` / `run_speedtest`.
+///
+/// - `scan_ports` / `scan_udp_ports` : si `src` est `None`, le socket TCP/UDP
+///   n'est pas bindé à une adresse source particulière — le système
+///   d'exploitation choisit l'interface de sortie automatiquement (comportement
+///   équivalent à `bind("0.0.0.0:0")`). Cela ne provoque pas de panique ni
+///   d'erreur ; les scans fonctionnent mais partent possiblement par une autre
+///   interface que celle attendue par l'utilisateur.
+/// - `run_iperf3` / `run_speedtest` : même sémantique — `None` est interprété
+///   comme "laisser l'OS choisir".
+///
+/// En résumé : `None` est sûr, mais peut donner des résultats mesurés sur une
+/// interface non désirée si plusieurs interfaces sont présentes.
 fn resolve_src(state: &AppState) -> Option<Ipv4Addr> {
     let name = state
         .selected_interface

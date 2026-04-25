@@ -439,6 +439,8 @@ async fn cmd_scan_network(
         }
 
         shared.emit("discovery:done", serde_json::Value::Null);
+        // Remettre scan_cancel à true (idle) : le scan est terminé normalement.
+        shared.scan_cancel.store(true, Ordering::SeqCst);
     });
 
     Ok(())
