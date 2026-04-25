@@ -3,6 +3,8 @@
   import { _ } from 'svelte-i18n';
   import { portscan, type ScanEntry } from '../stores/portscan';
   import { portscanProfiles, type PortScanProfile } from '../stores/portscanProfiles';
+  import { scheduler } from '../stores/scheduler';
+  import { get } from 'svelte/store';
 
   let newIp = $state('');
   let showManager = $state(false);
@@ -40,6 +42,14 @@
     if (!ip) return;
     newIp = '';
     await portscan.add(ip, activeProfile?.tcp_ports, activeProfile?.udp_ports, activeProfile?.id ?? null, activeProfile?.name ?? null);
+    const sched = get(scheduler);
+    scheduler.save({ ...sched, portscan_targets: [...new Set([...sched.portscan_targets, ip])] });
+  }
+
+  function removeHost(ip: string) {
+    portscan.remove(ip);
+    const sched = get(scheduler);
+    scheduler.save({ ...sched, portscan_targets: sched.portscan_targets.filter(t => t !== ip) });
   }
 
   function rescan(entry: ScanEntry) {
@@ -144,7 +154,7 @@
           {/if}
           <span class="spacer"></span>
           <button class="mini" onclick={(e) => { e.stopPropagation(); rescan(entry); }} title={$_('port_scan.rescan')}>⟳</button>
-          <button class="mini" onclick={(e) => { e.stopPropagation(); portscan.remove(entry.ip); }} title={$_('port_scan.remove')}>✕</button>
+          <button class="mini" onclick={(e) => { e.stopPropagation(); removeHost(entry.ip); }} title={$_('port_scan.remove')}>✕</button>
         </div>
 
         {#if entry.expanded}

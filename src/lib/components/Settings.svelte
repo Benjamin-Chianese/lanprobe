@@ -10,6 +10,8 @@
   import { selectedInterface } from '../stores/selectedInterface';
   import { influxDb, type InfluxDbConfig } from '../stores/influxdb';
   import { scheduler, type SchedulerConfig } from '../stores/scheduler';
+  import { discoveryStore } from '../stores/discovery';
+  import { portscan } from '../stores/portscan';
 
   const langs: { value: Lang; labelKey: string }[] = [
     { value: 'en', labelKey: 'settings.language.english' },
@@ -51,7 +53,6 @@
 
   // Scheduler config
   let schedCfg = $state<SchedulerConfig>({ ...$scheduler, portscan_targets: [...($scheduler.portscan_targets ?? [])] });
-  let newPortscanTarget = $state('');
 
   $effect(() => {
     schedCfg = { ...$scheduler, portscan_targets: [...($scheduler.portscan_targets ?? [])] };
@@ -80,18 +81,9 @@
   }
 
   async function saveSched() {
-    await scheduler.save(schedCfg);
-  }
-
-  function addPortscanTarget() {
-    const t = newPortscanTarget.trim();
-    if (!t || schedCfg.portscan_targets.includes(t)) return;
-    schedCfg = { ...schedCfg, portscan_targets: [...schedCfg.portscan_targets, t] };
-    newPortscanTarget = '';
-  }
-
-  function removePortscanTarget(target: string) {
-    schedCfg = { ...schedCfg, portscan_targets: schedCfg.portscan_targets.filter(x => x !== target) };
+    const cidr = get(discoveryStore).cidr || schedCfg.discovery_cidr;
+    const targets = [...get(portscan).keys()];
+    await scheduler.save({ ...schedCfg, discovery_cidr: cidr, portscan_targets: targets });
   }
 
   // Compte serveur (username/password)
@@ -618,28 +610,10 @@
         </div>
       </div>
       <div class="row-control" style="margin-top: 6px;">
-        <span class="row-label">{$_('settings.scheduler.cidr_label')}</span>
-        <input type="text" bind:value={schedCfg.discovery_cidr} placeholder={$_('settings.scheduler.cidr_placeholder')} onblur={saveSched} />
-      </div>
-      <div class="row-control" style="margin-top: 6px;">
         <span class="row-label">{$_('settings.scheduler.portscan_label')}</span>
         <div style="display:flex;align-items:center;gap:6px;">
           <input type="number" min="0" style="width:80px;" bind:value={schedCfg.portscan_interval_min} onblur={saveSched} />
           <span class="row-label">{$_('settings.scheduler.interval_unit')}</span>
-        </div>
-      </div>
-      <div style="margin-top: 8px;">
-        <div class="row-label" style="margin-bottom:4px;">{$_('settings.scheduler.targets_label')}</div>
-        {#each schedCfg.portscan_targets as target}
-          <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">
-            <span class="mono" style="flex:1;">{target}</span>
-            <button class="action-btn" onclick={() => { removePortscanTarget(target); saveSched(); }}>✕</button>
-          </div>
-        {/each}
-        <div style="display:flex;gap:6px;margin-top:4px;">
-          <input type="text" bind:value={newPortscanTarget} placeholder={$_('settings.scheduler.targets_placeholder')}
-            style="flex:1;" onkeydown={(e) => { if (e.key === 'Enter') { addPortscanTarget(); saveSched(); } }} />
-          <button class="action-btn" onclick={() => { addPortscanTarget(); saveSched(); }}>{$_('settings.scheduler.add_target')}</button>
         </div>
       </div>
       <p class="hint">{$_('settings.scheduler.hint')}</p>
@@ -743,7 +717,8 @@
   .row-label { font-size: 13px; font-weight: 600; }
   .row-control select,
   .row-control input[type="text"],
-  .row-control input[type="password"] {
+  .row-control input[type="password"],
+  .row-control input[type="number"] {
     background: var(--ep-bg-tertiary);
     border: 1px solid var(--ep-glass-border-strong);
     color: var(--ep-text-primary);

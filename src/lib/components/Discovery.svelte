@@ -6,6 +6,7 @@
   import { _ } from 'svelte-i18n';
   import { discoveryStore, type DiscoveredHost } from '../stores/discovery';
   import { portscan } from '../stores/portscan';
+  import { scheduler } from '../stores/scheduler';
   import { portscanProfiles } from '../stores/portscanProfiles';
   import { monitoring } from '../stores/monitoring';
   import { selectedInterface } from '../stores/selectedInterface';
@@ -96,6 +97,7 @@
     discoveryStore.clear();
     discoveryStore.setScanning(true);
     discoveryStore.setError('');
+    scheduler.save({ ...get(scheduler), discovery_cidr: cidr });
     try {
       await invoke('cmd_scan_network', { cidr });
     } catch (e) {
