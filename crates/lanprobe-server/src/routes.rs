@@ -470,7 +470,7 @@ async fn dispatch(cmd: &str, args: Value, state: &AppState) -> Result<Value, Str
         }
 
         "cmd_test_influxdb" => {
-            match crate::influxdb::test_connection(state).await {
+            match crate::influxdb::test_connection(state.clone()).await {
                 Ok(()) => Ok(serde_json::json!({ "ok": true })),
                 Err(e) => Ok(serde_json::json!({ "ok": false, "error": e })),
             }

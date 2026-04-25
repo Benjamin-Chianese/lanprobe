@@ -74,7 +74,6 @@ impl InfluxConfig {
 struct InfluxClient {
     http: reqwest::Client,
     base_url: String,
-    query_params: Vec<(String, String)>,
     auth_header: Option<String>,
     host_tag: String,
 }
@@ -83,16 +82,12 @@ impl InfluxClient {
     async fn new(cfg: &InfluxConfig) -> Self {
         let host_tag = resolve_host_tag_async(cfg).await;
 
-        let (base_url, query_params, auth_header) = if cfg.version == "v1" {
-            // Credentials en query params (InfluxDB v1 les supporte nativement).
-            // On préfère ça à Basic Auth pour éviter une dépendance optionnelle
-            // tout en restant correct — mais la crate base64 étant disponible,
-            // on utilise quand même Basic Auth pour plus de sécurité sur HTTPS.
-            let url = format!("{}/write", cfg.url.trim_end_matches('/'));
-            let params = vec![
-                ("db".to_string(), cfg.v1.database.clone()),
-                ("precision".to_string(), "ns".to_string()),
-            ];
+        let (base_url, auth_header) = if cfg.version == "v1" {
+            let mut url = reqwest::Url::parse(&format!("{}/write", cfg.url.trim_end_matches('/')))
+                .expect("invalid InfluxDB URL");
+            url.query_pairs_mut()
+                .append_pair("db", &cfg.v1.database)
+                .append_pair("precision", "ns");
             let auth = if !cfg.v1.username.is_empty() {
                 let encoded =
                     B64_STANDARD.encode(format!("{}:{}", cfg.v1.username, cfg.v1.password));
@@ -100,26 +95,25 @@ impl InfluxClient {
             } else {
                 None
             };
-            (url, params, auth)
+            (url.to_string(), auth)
         } else {
-            let url = format!("{}/api/v2/write", cfg.url.trim_end_matches('/'));
-            let params = vec![
-                ("org".to_string(), cfg.v2.org.clone()),
-                ("bucket".to_string(), cfg.v2.bucket.clone()),
-                ("precision".to_string(), "ns".to_string()),
-            ];
+            let mut url = reqwest::Url::parse(&format!("{}/api/v2/write", cfg.url.trim_end_matches('/')))
+                .expect("invalid InfluxDB URL");
+            url.query_pairs_mut()
+                .append_pair("org", &cfg.v2.org)
+                .append_pair("bucket", &cfg.v2.bucket)
+                .append_pair("precision", "ns");
             let auth = if !cfg.v2.token.is_empty() {
                 Some(format!("Token {}", cfg.v2.token))
             } else {
                 None
             };
-            (url, params, auth)
+            (url.to_string(), auth)
         };
 
         Self {
             http: reqwest::Client::new(),
             base_url,
-            query_params,
             auth_header,
             host_tag,
         }
@@ -128,7 +122,6 @@ impl InfluxClient {
     async fn write(&self, body: String) -> Result<(), String> {
         let mut req = self.http
             .post(&self.base_url)
-            .query(&self.query_params)
             .timeout(std::time::Duration::from_secs(10))
             .body(body);
         if let Some(auth) = &self.auth_header {
