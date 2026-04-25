@@ -62,6 +62,7 @@
   }
 
   async function testInflux() {
+    await saveInflux();    // flush current form state to backend config first
     influxTestStatus = 'testing';
     influxTestError = '';
     try {
