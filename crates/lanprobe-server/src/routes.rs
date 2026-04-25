@@ -203,7 +203,13 @@ async fn dispatch(cmd: &str, args: Value, state: &AppState) -> Result<Value, Str
             let cidr = args.get("cidr").and_then(|v| v.as_str()).ok_or("missing cidr")?.to_string();
             let (first, last) = parse_cidr(&cidr)?;
             let src = resolve_src_strict(state)?;
-            state.scan_cancel.store(false, Ordering::SeqCst);
+            if state
+                .scan_cancel
+                .compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst)
+                .is_err()
+            {
+                return Err("A network scan is already in progress".to_string());
+            }
             state.discovery.clear();
             let cancel = state.scan_cancel.clone();
             let events = state.events.clone();

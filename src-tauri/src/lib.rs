@@ -342,7 +342,13 @@ async fn cmd_scan_network(
 ) -> Result<(), String> {
     let (first, last) = parse_cidr(&cidr)?;
     let src = resolve_src_strict(state.inner())?;
-    state.scan_cancel.store(false, Ordering::SeqCst);
+    if state
+        .scan_cancel
+        .compare_exchange(true, false, Ordering::SeqCst, Ordering::SeqCst)
+        .is_err()
+    {
+        return Err("A network scan is already in progress".to_string());
+    }
     state.discovery.clear();
     let shared = state.inner().clone();
 
