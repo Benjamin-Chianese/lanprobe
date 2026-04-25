@@ -358,6 +358,39 @@
       "english": "Anglais",
       "french": "Français",
       "spanish": "Espagnol"
+    },
+    "influxdb": {
+      "title": "Export InfluxDB",
+      "enabled": "Activer l'export InfluxDB",
+      "version": "Version",
+      "url": "URL",
+      "url_placeholder": "http://influxdb:8086",
+      "instance_label": "Label d'instance",
+      "instance_label_placeholder": "Laisser vide pour utiliser le hostname",
+      "v1_database": "Base de données",
+      "v1_username": "Utilisateur",
+      "v1_password": "Mot de passe",
+      "v2_org": "Organisation",
+      "v2_bucket": "Bucket",
+      "v2_token": "Token",
+      "test_btn": "Tester la connexion",
+      "test_ok": "Connecté",
+      "test_fail": "Échec de connexion",
+      "hint": "Pousse les métriques vers InfluxDB en temps réel. Supporte InfluxDB v1 et v2."
+    },
+    "scheduler": {
+      "title": "Planificateur",
+      "speedtest_label": "Intervalle speed test",
+      "discovery_label": "Intervalle découverte",
+      "portscan_label": "Intervalle scan de ports",
+      "cidr_label": "CIDR de découverte",
+      "cidr_placeholder": "Détection automatique",
+      "targets_label": "Cibles du scan de ports",
+      "targets_placeholder": "192.168.1.1",
+      "add_target": "Ajouter",
+      "interval_disabled": "Désactivé (0 = désactivé)",
+      "interval_unit": "min",
+      "hint": "Lance automatiquement des sondes à intervalles réguliers. Les résultats sont exportés vers InfluxDB si activé."
     }
   }
 }

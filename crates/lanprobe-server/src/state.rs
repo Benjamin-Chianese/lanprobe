@@ -277,7 +277,11 @@ impl AppState {
         Self {
             selected_interface: Arc::new(Mutex::new(None)),
             ping_stop: Arc::new(Mutex::new(HashMap::new())),
-            scan_cancel: Arc::new(AtomicBool::new(false)),
+            // Initialisé à `true` (idle) : `false` signifie "un scan est en
+            // cours", `true` signifie "idle / annulation demandée". Ainsi le
+            // scheduler peut utiliser un CAS(true→false) pour détecter
+            // atomiquement qu'aucun scan concurrent n'est en cours.
+            scan_cancel: Arc::new(AtomicBool::new(true)),
             internet: Arc::new(InternetHistory::default()),
             discovery: Arc::new(DiscoveryStateInner::default()),
             monitoring: Arc::new(MonitoringStateInner::default()),

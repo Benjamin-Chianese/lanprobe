@@ -180,6 +180,7 @@ pub async fn run_iperf3(server: &str, src: Option<Ipv4Addr>) -> Result<SpeedResu
         .as_secs();
 
     Ok(SpeedResult {
+        engine: "iperf3".to_string(),
         download_mbps,
         upload_mbps,
         latency_ms: 0,

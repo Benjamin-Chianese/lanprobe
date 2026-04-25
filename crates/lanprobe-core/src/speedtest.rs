@@ -5,6 +5,7 @@ use super::proc::async_cmd;
 
 #[derive(Debug, Serialize, Clone, Default)]
 pub struct SpeedResult {
+    pub engine: String,
     pub download_mbps: f64,
     pub upload_mbps: f64,
     pub latency_ms: u64,
@@ -420,6 +421,7 @@ async fn run_ookla_cli(bind_arg: Option<&str>, bind_flag: &str, iface_for_err: O
     let server_name = format!("{} — {}, {}", r.server.name, r.server.location, r.server.country);
 
     Ok(SpeedResult {
+        engine: "ookla".to_string(),
         download_mbps: (r.download.bandwidth as f64 * 8.0) / 1_000_000.0,
         upload_mbps: (r.upload.bandwidth as f64 * 8.0) / 1_000_000.0,
         latency_ms: if r.ping.latency.is_finite() && r.ping.latency >= 0.0 { r.ping.latency.round() as u64 } else { 0 },
@@ -428,5 +430,25 @@ async fn run_ookla_cli(bind_arg: Option<&str>, bind_flag: &str, iface_for_err: O
         result_url: if r.result.url.is_empty() { None } else { Some(r.result.url) },
         timestamp,
     })
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn speed_result_has_engine_field() {
+        let r = SpeedResult {
+            engine: "ookla".to_string(),
+            download_mbps: 100.0,
+            upload_mbps: 50.0,
+            latency_ms: 10,
+            jitter_ms: None,
+            server_name: "test".to_string(),
+            result_url: None,
+            timestamp: 0,
+        };
+        assert_eq!(r.engine, "ookla");
+    }
 }
 

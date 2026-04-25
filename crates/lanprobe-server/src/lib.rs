@@ -6,7 +6,9 @@
 pub mod assets;
 pub mod auth;
 pub mod config;
+pub mod influxdb;
 pub mod routes;
+pub mod scheduler;
 pub mod state;
 pub mod tls;
 pub mod web;
@@ -86,6 +88,11 @@ pub async fn start(cfg: StartConfig) -> Result<ServerHandle, String> {
         ));
         state
     };
+
+    let influx_state = state.clone();
+    tokio::spawn(crate::influxdb::run(influx_state));
+    let sched_state = state.clone();
+    tokio::spawn(crate::scheduler::run(sched_state));
 
     let tls_paths = tls::tls_paths(&cfg.config_dir);
     let tls_server_config = tls::ensure_rustls_config(&tls_paths).await?;
