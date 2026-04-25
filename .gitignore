@@ -14,6 +14,7 @@ Thumbs.db
 .env
 macos_error.txt
 @eaDir/
+.worktrees/
 Screenshot *.png
 
 # Apple signing certs (never commit)
