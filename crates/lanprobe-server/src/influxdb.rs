@@ -59,11 +59,12 @@ impl InfluxConfig {
         }
         match self.version.as_str() {
             "v1" => !self.v1.database.is_empty(),
-            _ => {
+            "v2" | "" => {
                 !self.v2.org.is_empty()
                     && !self.v2.bucket.is_empty()
                     && !self.v2.token.is_empty()
             }
+            _ => false,
         }
     }
 }
@@ -86,7 +87,7 @@ impl InfluxClient {
             // On préfère ça à Basic Auth pour éviter une dépendance optionnelle
             // tout en restant correct — mais la crate base64 étant disponible,
             // on utilise quand même Basic Auth pour plus de sécurité sur HTTPS.
-            let mut url = format!(
+            let url = format!(
                 "{}/write?db={}&precision=ns",
                 cfg.url.trim_end_matches('/'),
                 cfg.v1.database
@@ -98,18 +99,6 @@ impl InfluxClient {
             } else {
                 None
             };
-            // Fallback : si pas d'auth header, injecte les credentials en
-            // query params (cas où Basic Auth n'est pas configuré mais des
-            // credentials existent quand même — ne devrait pas arriver).
-            if auth.is_none() && !cfg.v1.username.is_empty() {
-                url = format!(
-                    "{}/write?db={}&u={}&p={}&precision=ns",
-                    cfg.url.trim_end_matches('/'),
-                    cfg.v1.database,
-                    cfg.v1.username,
-                    cfg.v1.password,
-                );
-            }
             (url, auth)
         } else {
             let url = format!(
@@ -135,7 +124,10 @@ impl InfluxClient {
     }
 
     async fn write(&self, body: String) -> Result<(), String> {
-        let mut req = self.http.post(&self.write_url).body(body);
+        let mut req = self.http
+            .post(&self.write_url)
+            .timeout(std::time::Duration::from_secs(10))
+            .body(body);
         if let Some(auth) = &self.auth_header {
             req = req.header("Authorization", auth);
         }
@@ -168,6 +160,11 @@ fn resolve_host_tag(cfg: &InfluxConfig) -> String {
 /// Escapes spaces, commas and equals signs as required by InfluxDB Line Protocol.
 fn escape_tag(s: &str) -> String {
     s.replace(',', "\\,").replace('=', "\\=").replace(' ', "\\ ")
+}
+
+/// Escapes backslashes and double-quotes for InfluxDB Line Protocol string field values.
+fn escape_field_str(s: &str) -> String {
+    s.replace('\\', "\\\\").replace('"', "\\\"")
 }
 
 /// Converts a `BroadcastEvent` to zero or more InfluxDB line protocol strings.
@@ -224,7 +221,7 @@ fn event_to_points(event: &BroadcastEvent, host: &str) -> Vec<String> {
             vec![format!(
                 "internet_status,host={} state=\"{}\",icmp_ms={}i,http_ms={}i,dns_ms={}i,uptime_pct={},icmp_ok={},http_ok={},dns_ok={} {}",
                 host_tag,
-                escape_tag(state),
+                escape_field_str(state),
                 icmp,
                 http,
                 dns,
@@ -550,6 +547,26 @@ mod tests {
         assert_eq!(points.len(), 1);
         assert!(points[0].contains("cidr=10.0.0.0/24"), "Expected cidr tag in: {}", points[0]);
         assert!(points[0].contains("hosts_found=3i"), "Expected hosts_found in: {}", points[0]);
+    }
+
+    #[test]
+    fn test_event_to_points_discovery_empty_cidr() {
+        let event = BroadcastEvent {
+            event: "discovery:done".to_string(),
+            payload: serde_json::json!({ "cidr": "", "hosts_found": 0 }),
+        };
+        let points = event_to_points(&event, "testhost");
+        assert!(points.is_empty(), "empty cidr should produce no points");
+    }
+
+    #[test]
+    fn test_event_to_points_portscan_in_progress() {
+        let event = BroadcastEvent {
+            event: "portscan:update".to_string(),
+            payload: serde_json::json!({ "ip": "192.168.1.1", "tcp": [], "udp": [], "in_progress": true }),
+        };
+        let points = event_to_points(&event, "testhost");
+        assert!(points.is_empty(), "in-progress scan should produce no points");
     }
 
     #[test]
